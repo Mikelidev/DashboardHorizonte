@@ -381,9 +381,16 @@ export function processDashboardData(
                     masterServiceStr = 'NATURAL'; // Explicit natural service
                     isApta = true;
                     break;
-                } else if (repStr === 'AS' || repStr === 'AP' || repStr === 'NO APTA') {
-                    // Definitely not apt
-                    reproState = 'ANESTRO';
+                } else if (repStr === 'AS') {
+                    reproState = 'ANESTRO SUPERFICIAL';
+                    isApta = false;
+                    break;
+                } else if (repStr === 'AP') {
+                    reproState = 'ANESTRO PROFUNDO';
+                    isApta = false;
+                    break;
+                } else if (repStr === 'NO APTA') {
+                    reproState = 'NO APTA';
                     isApta = false;
                     break;
                 } else if (repStr.includes('CICLANDO')) {

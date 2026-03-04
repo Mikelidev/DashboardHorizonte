@@ -8,7 +8,11 @@ export default function GlobalReproductiveCard() {
 
     const totalStats = useMemo(() => {
         let prenadas = 0;
-        let vacias = 0;
+        let ciclando = 0;
+        let as = 0;
+        let ap = 0;
+        let noApta = 0;
+        let vaciasTotal = 0; // Sum of everything else, plus any empty/unknown
         let activas = 0;
 
         let iaCount = 0;
@@ -19,13 +23,13 @@ export default function GlobalReproductiveCard() {
             if (!an.isActive) return;
 
             const s = an.reproductiveState?.toUpperCase() || '';
-            if (s.includes('PREÑADA')) {
+
+            if (s.includes('PREÑADA') || s.includes('PRENADA')) {
                 prenadas++;
                 activas++;
 
-                // Find the actual service type string that got her pregnant
+                // Count Service Types
                 let serviceStr = '';
-                // Look for the latest event with a populated serviceType
                 for (let i = 0; i < an.eventos.length; i++) {
                     const st = an.eventos[i].serviceType;
                     if (st && st.trim() !== '') {
@@ -33,30 +37,38 @@ export default function GlobalReproductiveCard() {
                         break;
                     }
                 }
-
-                // Fallback to the master ficha if the event timeline was barren of service metadata
                 if (serviceStr === '' && an.masterServiceType) {
                     serviceStr = an.masterServiceType.trim().toUpperCase();
                 }
 
-                // Normalize accents for robust matching
                 const normalizedStr = serviceStr.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-
-                // Check TE FIRST to prevent the "IA" in "TransferencIA" from triggering a false positive
                 if (normalizedStr.includes('TE') || normalizedStr.includes('EMBRION') || normalizedStr.includes('EMBRI')) teCount++;
-                // Use regex with word boundaries for pure 'IA' to prevent substring collisions, or broad sweeps for Insemination keywords
                 else if (/\bIA\b/.test(normalizedStr) || normalizedStr.includes('IATF') || normalizedStr.includes('INSEMINA')) iaCount++;
                 else if (normalizedStr.includes('REPASO') || normalizedStr.includes('TORO') || normalizedStr.includes('NATURAL') || normalizedStr.includes('MN')) natCount++;
 
-            } else if (s.includes('VACIA') || s.includes('ANESTRO') || s.includes('CICLANDO')) {
-                vacias++;
+            } else {
+                vaciasTotal++; // Count as generic 'Vacia'
                 activas++;
+
+                if (s.includes('CICLANDO')) {
+                    ciclando++;
+                } else if (s.includes('SUPERFICIAL') || s === 'AS') {
+                    as++;
+                } else if (s.includes('PROFUNDO') || s === 'AP') {
+                    ap++;
+                } else if (s.includes('NO APTA')) {
+                    noApta++;
+                }
             }
         });
 
         return {
             prenadas,
-            vacias,
+            ciclando,
+            as,
+            ap,
+            noApta,
+            vacias: vaciasTotal,
             iaCount,
             teCount,
             natCount,
@@ -66,9 +78,12 @@ export default function GlobalReproductiveCard() {
     }, [animals]);
 
     const pieData = [
-        { name: 'Preñadas', value: totalStats.prenadas, color: '#10b981' },
-        { name: 'Vacías', value: totalStats.vacias, color: '#f43f5e' }
-    ];
+        { name: 'Preñadas', value: totalStats.prenadas, color: '#3b82f6' },        // Azul
+        { name: 'Ciclando', value: totalStats.ciclando, color: '#10b981' },        // Verde
+        { name: 'AS', value: totalStats.as, color: '#f59e0b' },                    // Amarillo
+        { name: 'AP', value: totalStats.ap, color: '#ef4444' },                    // Rojo
+        { name: 'No Apta / Vacía', value: totalStats.vacias - (totalStats.ciclando + totalStats.as + totalStats.ap), color: '#94a3b8' } // Gris (Leftovers)
+    ].filter(d => d.value > 0);
 
     if (totalStats.total === 0) {
         return (
