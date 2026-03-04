@@ -135,18 +135,41 @@ export default function GlobalReproductiveCard() {
                     <span className="text-rose-600">{totalStats.vacias} Vacías</span>
                 </div>
 
-                <div className="flex justify-center gap-8 text-xs text-slate-500 mt-1 px-1">
-                    <div className="flex flex-col items-center">
-                        <span className="font-semibold text-slate-700">{totalStats.iaCount}</span>
-                        <span>IATF</span>
+                <div className="flex justify-between w-full mt-2">
+                    {/* Detalles de Preñadas */}
+                    <div className="flex gap-3 sm:gap-4 text-[10px] sm:text-xs text-slate-500 px-1">
+                        <div className="flex flex-col items-center">
+                            <span className="font-semibold text-slate-700">{totalStats.iaCount}</span>
+                            <span>IATF</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="font-semibold text-slate-700">{totalStats.teCount}</span>
+                            <span>TE</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="font-semibold text-slate-700">{totalStats.natCount}</span>
+                            <span>Natural</span>
+                        </div>
                     </div>
-                    <div className="flex flex-col items-center">
-                        <span className="font-semibold text-slate-700">{totalStats.teCount}</span>
-                        <span>TE</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <span className="font-semibold text-slate-700">{totalStats.natCount}</span>
-                        <span>Natural</span>
+
+                    {/* Detalles de Vacías */}
+                    <div className="flex gap-3 sm:gap-4 text-[10px] sm:text-xs text-slate-500 px-1">
+                        <div className="flex flex-col items-center">
+                            <span className="font-semibold text-slate-700">{totalStats.ciclando}</span>
+                            <span>Ciclando</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="font-semibold text-slate-700">{totalStats.as}</span>
+                            <span>AS</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="font-semibold text-slate-700">{totalStats.ap}</span>
+                            <span>AP</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="font-semibold text-slate-700">{totalStats.noApta}</span>
+                            <span>No Apta</span>
+                        </div>
                     </div>
                 </div>
             </div>
