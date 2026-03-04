@@ -73,7 +73,7 @@ export default function GlobalReproductiveCard() {
     if (totalStats.total === 0) {
         return (
             <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-3xl p-6 shadow-sm flex items-center justify-center min-h-[300px]">
-                <span className="text-slate-500">Sincronizando el estado reproductivo...</span>
+                <span className="text-slate-500">Todavía no hay información disponible a la fecha</span>
             </div>
         );
     }
