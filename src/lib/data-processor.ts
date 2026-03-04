@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { AnimalRaw, EventoRaw, ProcessedAnimal, ProcessedEvent, ThresholdSettings, DashboardData, SnapshotDate } from '../types';
+import { AnimalRaw, EventoRaw, ProcessedAnimal, ProcessedEvent, ThresholdSettings, DashboardData, SnapshotDate, DataAnomaly } from '../types';
 
 /**
  * Helper to parse custom date format from the CSV (e.g. DD/MM/YYYY)
@@ -108,6 +108,23 @@ export function processDashboardData(
             date: d
         });
     });
+
+    const anomalies: DataAnomaly[] = [];
+
+    // Check duplicates early
+    const ideSet = new Set<string>();
+    for (const an of animales) {
+        if (!an.IDE) continue;
+        if (ideSet.has(an.IDE)) {
+            anomalies.push({
+                ide: an.IDE,
+                desc: "IDE duplicado en el maestro de animales.",
+                location: "Ficha Animales",
+                cause: "Error de carga manual o escaneo doble del chip."
+            });
+        }
+        ideSet.add(an.IDE);
+    }
 
     // 2. Identify the absolute latest date in the dataset (for Inventory Rule)
     let globalMaxTime = 0;
@@ -233,6 +250,46 @@ export function processDashboardData(
                 }
             }
         }
+
+        // --- ANOMALY AUDIT ---
+        let hasTact2OrIatf = false;
+        let firstPregnancyDate: Date | null = null;
+        let earliestServiceDate: Date | null = null;
+
+        for (let i = 0; i < chronoEvents.length; i++) {
+            const ev = chronoEvents[i];
+            const evType = ev.type.toUpperCase();
+            const reproState = (ev.reproductiveState || '').toUpperCase();
+
+            // GDM Anomalies
+            if (ev.gdm !== null) {
+                if (ev.gdm > 2.5) {
+                    anomalies.push({ ide: an.IDE, desc: `GDM biológicamente imposible elevado (${ev.gdm} kg/día).`, location: `Eventos (${evType})`, cause: "Error de data entry en el peso actual o anterior." });
+                } else if (ev.gdm < -1.0) {
+                    anomalies.push({ ide: an.IDE, desc: `Pérdida de peso severa inexplicable (${ev.gdm} kg/día).`, location: `Eventos (${evType})`, cause: "Posible error de lectura de pesada o desbaste no registrado." });
+                }
+            }
+
+            if (evType.includes('TACTO ANESTRO 2') || evType.includes('IATF')) hasTact2OrIatf = true;
+
+            if (evType.includes('IATF') || (ev.serviceType && ev.serviceType.trim() !== '')) {
+                if (!earliestServiceDate || ev.date.getTime() < earliestServiceDate.getTime()) earliestServiceDate = ev.date;
+            }
+
+            if (reproState === 'PREÑADA' || (evType.includes('IATF') && ev.serviceType && ev.serviceType.trim() !== '')) {
+                if (!firstPregnancyDate || ev.date.getTime() < firstPregnancyDate.getTime()) firstPregnancyDate = ev.date;
+            }
+        }
+
+        if (firstPregnancyDate && earliestServiceDate && firstPregnancyDate.getTime() < earliestServiceDate.getTime()) {
+            anomalies.push({ ide: an.IDE, desc: `Registro de preñez anterior a la fecha de servicio.`, location: `Eventos`, cause: "Error de tipeo en las fechas." });
+        }
+
+        // Phantom check (Has reached ending weight but skipped the reproduction cycle)
+        if (currentWeight !== null && currentWeight > 310 && !hasTact2OrIatf) {
+            anomalies.push({ ide: an.IDE, desc: `Fantasma Operativo: Registra buen peso (${currentWeight} kg) pero no ingresó a Tacto 2 ni IATF.`, location: `Falta evento reproductivo`, cause: "Saltó la manga o perdió caravana (chip ilegible)." });
+        }
+        // --- END ANOMALY AUDIT ---
 
         // -------------------------------------------------------------------------------------------------
         // 2. ASSIGN PROTOCOL SCORES FOR BIOLOGICAL TIMELINE (Tactos are ultimate phase)
@@ -447,6 +504,7 @@ export function processDashboardData(
     // Return the packaged DashboardData structure
     return {
         animals: draftAnimals,
-        availableSnapshots: availableSnapshots
+        availableSnapshots: availableSnapshots,
+        anomalies: anomalies
     };
 }

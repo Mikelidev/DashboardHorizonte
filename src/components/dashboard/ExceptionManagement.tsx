@@ -5,7 +5,7 @@ import { AlertCircle, ArrowDown, ArrowUp, Activity, CheckCircle2, XCircle } from
 import { ProcessedAnimal } from '@/types';
 
 export default function ExceptionManagement() {
-    const { animals, settings } = useDashboard();
+    const { animals, settings, anomalies } = useDashboard();
 
     const alerts = useMemo(() => {
         const active = animals.filter(a => a.isActive);
@@ -161,6 +161,49 @@ export default function ExceptionManagement() {
                 </motion.div>
 
             </div>
+
+            {/* QA AUDIT DATA ANOMALIES SECTION */}
+            {anomalies && anomalies.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mt-8 glass rounded-2xl p-6 border-2 border-indigo-200/50 bg-indigo-50/20">
+                    <div className="flex items-center justify-between mb-6 border-b border-indigo-100 pb-4">
+                        <div>
+                            <h3 className="text-xl font-bold text-indigo-900 flex items-center gap-2">
+                                <Activity className="w-6 h-6 text-indigo-600" />
+                                Auditoría de Integridad de Datos (QA)
+                            </h3>
+                            <p className="text-sm text-indigo-700 mt-1">
+                                Anormalidades detectadas cruzando cronología biológica y ganancias metabólicas extremas.
+                            </p>
+                        </div>
+                        <span className="font-extrabold bg-indigo-600 text-white px-3 py-1.5 rounded-lg shadow-sm">
+                            {anomalies.length} Errores
+                        </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b-2 border-indigo-200">
+                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">IDE</th>
+                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Anomalía Detectada</th>
+                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Ubicación</th>
+                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Posible Causa</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y text-sm">
+                                {anomalies.map((ano, i) => (
+                                    <tr key={`${ano.ide}-${i}`} className="hover:bg-indigo-50/50 transition-colors">
+                                        <td className="py-3 px-4 font-mono font-bold text-indigo-900 whitespace-nowrap">{ano.ide}</td>
+                                        <td className="py-3 px-4 text-slate-800 break-words">{ano.desc}</td>
+                                        <td className="py-3 px-4 text-slate-600 whitespace-nowrap"><span className="bg-white/60 px-2 py-1 rounded text-xs font-mono">{ano.location}</span></td>
+                                        <td className="py-3 px-4 text-slate-600 italic break-words">{ano.cause}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </motion.div>
+            )}
         </div>
     );
 }

@@ -76,7 +76,15 @@ export interface SnapshotDate {
   date: Date | null; // null means no cutoff
 }
 
+export interface DataAnomaly {
+  ide: string;
+  desc: string;
+  location: string;
+  cause: string;
+}
+
 export interface DashboardData {
   animals: ProcessedAnimal[];
   availableSnapshots: SnapshotDate[];
+  anomalies: DataAnomaly[];
 }

@@ -11,6 +11,7 @@ interface DashboardContextProps {
     availableSnapshots: SnapshotDate[];
     selectedSnapshot: string;
     setSelectedSnapshot: (id: string) => void;
+    anomalies: import('@/types').DataAnomaly[];
     loadDataFiles: (animalesCsv: string, eventosCsv: string) => void;
     isLoading: boolean;
     activeProfileIde: string | null;
@@ -32,6 +33,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     const [animals, setAnimals] = useState<ProcessedAnimal[]>([]);
     const [availableSnapshots, setAvailableSnapshots] = useState<SnapshotDate[]>([]);
     const [selectedSnapshot, setSelectedSnapshot] = useState<string>('actualidad');
+    const [anomalies, setAnomalies] = useState<import('@/types').DataAnomaly[]>([]);
     const [rawAnimales, setRawAnimales] = useState<string>('');
     const [rawEventos, setRawEventos] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -50,6 +52,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
 
             const processed = processDashboardData(rawAnimales, rawEventos, settings, activeCustomDate);
             setAnimals(processed.animals);
+            setAnomalies(processed.anomalies);
 
             // Only update snapshots array if it's the very first load/actualidad, to prevent snapshot shifting
             if (availableSnapshots.length === 0 || selectedSnapshot === 'actualidad') {
@@ -63,7 +66,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     return (
         <DashboardContext.Provider value={{
             settings, setSettings, animals, availableSnapshots,
-            selectedSnapshot, setSelectedSnapshot, loadDataFiles, isLoading,
+            selectedSnapshot, setSelectedSnapshot, anomalies, loadDataFiles, isLoading,
             activeProfileIde, setActiveProfileIde
         }}>
             {children}
