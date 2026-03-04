@@ -82,6 +82,16 @@ export default function ExceptionManagement() {
         </div>
     );
 
+    // Group anomalies by category
+    const groupedAnomalies = useMemo(() => {
+        if (!anomalies) return {};
+        return anomalies.reduce((acc, curr) => {
+            if (!acc[curr.category]) acc[curr.category] = [];
+            acc[curr.category].push(curr);
+            return acc;
+        }, {} as Record<string, import('@/types').DataAnomaly[]>);
+    }, [anomalies]);
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-end">
@@ -180,27 +190,37 @@ export default function ExceptionManagement() {
                         </span>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b-2 border-indigo-200">
-                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">IDE</th>
-                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Anomalía Detectada</th>
-                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Ubicación</th>
-                                    <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Posible Causa</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y text-sm">
-                                {anomalies.map((ano, i) => (
-                                    <tr key={`${ano.ide}-${i}`} className="hover:bg-indigo-50/50 transition-colors">
-                                        <td className="py-3 px-4 font-mono font-bold text-indigo-900 whitespace-nowrap">{ano.ide}</td>
-                                        <td className="py-3 px-4 text-slate-800 break-words">{ano.desc}</td>
-                                        <td className="py-3 px-4 text-slate-600 whitespace-nowrap"><span className="bg-white/60 px-2 py-1 rounded text-xs font-mono">{ano.location}</span></td>
-                                        <td className="py-3 px-4 text-slate-600 italic break-words">{ano.cause}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="space-y-6">
+                        {Object.entries(groupedAnomalies).map(([category, items]) => (
+                            <div key={category} className="bg-white/40 rounded-xl overflow-hidden shadow-sm border border-indigo-100/50">
+                                <div className="bg-indigo-100/50 px-4 py-3 flex items-center justify-between border-b border-indigo-100">
+                                    <h4 className="font-bold text-indigo-800">{category}</h4>
+                                    <span className="text-xs font-bold bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full">{items.length}</span>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-indigo-100">
+                                                <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-32">IDE</th>
+                                                <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Descripción</th>
+                                                <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-48">Ubicación</th>
+                                                <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-64">Posible Causa</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y text-sm divide-indigo-50">
+                                            {items.map((ano, i) => (
+                                                <tr key={`${ano.ide}-${i}`} className="hover:bg-indigo-50/50 transition-colors">
+                                                    <td className="py-3 px-4 font-mono font-bold text-indigo-900 whitespace-nowrap">{ano.ide}</td>
+                                                    <td className="py-3 px-4 text-slate-800 break-words">{ano.desc}</td>
+                                                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap"><span className="bg-white/60 px-2 py-1 rounded text-xs font-mono">{ano.location}</span></td>
+                                                    <td className="py-3 px-4 text-slate-600 italic break-words">{ano.cause}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </motion.div>
             )}

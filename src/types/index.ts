@@ -78,6 +78,7 @@ export interface SnapshotDate {
 
 export interface DataAnomaly {
   ide: string;
+  category: string;
   desc: string;
   location: string;
   cause: string;

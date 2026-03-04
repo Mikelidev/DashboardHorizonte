@@ -118,6 +118,7 @@ export function processDashboardData(
         if (ideSet.has(an.IDE)) {
             anomalies.push({
                 ide: an.IDE,
+                category: "Anomalías de base de datos",
                 desc: "IDE duplicado en el maestro de animales.",
                 location: "Ficha Animales",
                 cause: "Error de carga manual o escaneo doble del chip."
@@ -264,9 +265,9 @@ export function processDashboardData(
             // GDM Anomalies
             if (ev.gdm !== null) {
                 if (ev.gdm > 2.5) {
-                    anomalies.push({ ide: an.IDE, desc: `GDM biológicamente imposible elevado (${ev.gdm} kg/día).`, location: `Eventos (${evType})`, cause: "Error de data entry en el peso actual o anterior." });
+                    anomalies.push({ ide: an.IDE, category: "Anomalías de peso", desc: `GDM biológicamente imposible elevado (${ev.gdm} kg/día).`, location: `Eventos (${evType})`, cause: "Error de data entry en el peso actual o anterior." });
                 } else if (ev.gdm < -1.0) {
-                    anomalies.push({ ide: an.IDE, desc: `Pérdida de peso severa inexplicable (${ev.gdm} kg/día).`, location: `Eventos (${evType})`, cause: "Posible error de lectura de pesada o desbaste no registrado." });
+                    anomalies.push({ ide: an.IDE, category: "Anomalías de peso", desc: `Pérdida de peso severa inexplicable (${ev.gdm} kg/día).`, location: `Eventos (${evType})`, cause: "Posible error de lectura de pesada o desbaste no registrado." });
                 }
             }
 
@@ -282,12 +283,12 @@ export function processDashboardData(
         }
 
         if (firstPregnancyDate && earliestServiceDate && firstPregnancyDate.getTime() < earliestServiceDate.getTime()) {
-            anomalies.push({ ide: an.IDE, desc: `Registro de preñez anterior a la fecha de servicio.`, location: `Eventos`, cause: "Error de tipeo en las fechas." });
+            anomalies.push({ ide: an.IDE, category: "Inconsistencias reproductivas", desc: `Registro de preñez anterior a la fecha de servicio.`, location: `Eventos`, cause: "Error de tipeo en las fechas." });
         }
 
         // Phantom check (Has reached ending weight but skipped the reproduction cycle)
         if (currentWeight !== null && currentWeight > 310 && !hasTact2OrIatf) {
-            anomalies.push({ ide: an.IDE, desc: `Fantasma Operativo: Registra buen peso (${currentWeight} kg) pero no ingresó a Tacto 2 ni IATF.`, location: `Falta evento reproductivo`, cause: "Saltó la manga o perdió caravana (chip ilegible)." });
+            anomalies.push({ ide: an.IDE, category: "Faltantes operativos", desc: `Fantasma Operativo: Registra buen peso (${currentWeight} kg) pero no ingresó a Tacto 2 ni IATF.`, location: `Falta evento reproductivo`, cause: "Saltó la manga o perdió caravana (chip ilegible)." });
         }
         // --- END ANOMALY AUDIT ---
 
