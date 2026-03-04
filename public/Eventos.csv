@@ -1,0 +1,14 @@
+IDE,Fecha,Evento,N° Evento,GDM,Peso,Estado reproductivo,Tipo de Servicio,Comentarios
+1001,01/03/2024,Pesada,1,NO INFO,210,,,Primer pesaje
+1001,01/04/2024,Pesada,2,0.650,230,,,Crecimiento estable
+1001,15/04/2024,Tacto 1,3,,,Anestro Superficial,,Revisar dieta
+1001,01/05/2024,Pesada,4,0.700,251,,,
+1001,15/05/2024,Tacto 2,5,,,Ciclando,,Lista para IATF
+1002,01/03/2024,Pesada,1,0.500,190,,,
+1002,01/04/2024,Pesada,2,-0.100,187,,,Perdio peso
+1002,15/04/2024,Tacto 1,3,,,Anestro Profundo,,Apartar
+1003,01/05/2024,Pesada,4,0.850,280,,,Excelente genetica
+1003,15/05/2024,Tacto 2,5,,,Preñada,IATF,
+1004,01/05/2024,Pesada,4,0.400,220,,,
+1004,15/05/2024,Tacto 2,5,,,Anestro Profundo,,Alerta amarilla testing
+1005,15/05/2024,Tacto 2,5,,,NO INFO,,Error de carga en campo
