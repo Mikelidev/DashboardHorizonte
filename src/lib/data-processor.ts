@@ -353,7 +353,12 @@ export function processDashboardData(
             if (evType.includes('TACTO ANESTRO') || evType.includes('TACTO 1') || evType.includes('TACTO 2')) {
                 const repStr = (ev.reproductiveState || '').trim().toUpperCase();
 
-                if (repStr === 'AS' || repStr === 'AP' || repStr === 'NO APTA') {
+                if (repStr.includes('PREÑADA') || repStr.includes('PRENADA')) {
+                    // USER RULE: Early Natural Pregnancy detected in a Tacto Anestro counts as 'PREÑADA' for the current state snapshot
+                    reproState = 'PREÑADA';
+                    isApta = true;
+                    break;
+                } else if (repStr === 'AS' || repStr === 'AP' || repStr === 'NO APTA') {
                     // Definitely not apt
                     reproState = 'ANESTRO';
                     isApta = false;
