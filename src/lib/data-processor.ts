@@ -13,13 +13,27 @@ function parseDate(dateStr: string | null | undefined): Date | null {
         return nativeDate;
     }
 
-    // Fallback: Attempt custom DD/MM/YYYY if the native parser failed
+    // Fallback: Custom manual parsing.
+    // WARNING: Google Sheets with US Locale exports as MM/DD/YYYY, while AR locale exports DD/MM/YYYY.
+    // Looking at the data (e.g., 6/24/2025), it's clearly MM/DD/YYYY.
     const parts = dateStr.split('/');
     if (parts.length === 3) {
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
+        let p0 = parseInt(parts[0], 10);
+        let p1 = parseInt(parts[1], 10);
         let year = parseInt(parts[2], 10);
         if (year < 100) year += 2000;
+
+        let day = p0;
+        let month = p1 - 1;
+
+        // Auto-detect US Format if the middle number is > 12 OR just assume M/D/YYYY based on the sheet's behavior.
+        // If p0 > 12, it's definitely DD/MM/YYYY. If p1 > 12, it's definitely MM/DD/YYYY.
+        // Given historical data like "10/11/2025" was meant to be October 11 (Pesada de octubre), NOT Nov 10.
+        if (p1 > 12 || (p0 <= 12 && p1 <= 31)) {
+            // Assume MM/DD/YYYY to fix the "October" vs "November" inversion
+            month = p0 - 1;
+            day = p1;
+        }
 
         const d = new Date(year, month, day);
         if (!isNaN(d.getTime())) return d;
@@ -356,6 +370,7 @@ export function processDashboardData(
                 if (repStr.includes('PREÑADA') || repStr.includes('PRENADA')) {
                     // USER RULE: Early Natural Pregnancy detected in a Tacto Anestro counts as 'PREÑADA' for the current state snapshot
                     reproState = 'PREÑADA';
+                    masterServiceStr = 'NATURAL'; // Explicit natural service
                     isApta = true;
                     break;
                 } else if (repStr === 'AS' || repStr === 'AP' || repStr === 'NO APTA') {
@@ -378,6 +393,7 @@ export function processDashboardData(
             // 3. FALLBACK: Catch Service outside of specific Tacto IATF event name (just in case)
             if (!reproState && ev.serviceType && ev.serviceType.trim() !== '') {
                 reproState = 'PREÑADA';
+                if (!evType.includes('IATF')) masterServiceStr = 'NATURAL';
                 break;
             }
         }
@@ -391,7 +407,7 @@ export function processDashboardData(
             ide: an.IDE,
             raza: an.Raza || 'Desconocida', // Keeping for backwards UI compatibility
             padre: padreStr,
-            masterServiceType: masterServiceStr,
+            masterServiceType: masterServiceStr || 'Desconocido', // Safely provide fallback
             birthDate,
             isActive,
             eventos: animalEvents,
