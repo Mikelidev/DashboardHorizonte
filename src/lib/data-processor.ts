@@ -337,9 +337,17 @@ export function processDashboardData(
         let isActive = animalEvents.length > 0;
 
         // User Rule: If the LAST recorded event in the cow's timeline is a "Pesada" with NO INFO in both Peso and GDM, she is dead/sold -> Inactive
+        // BUGFIX: We must check ALL events on the absolute latest date. If she had an empty Pesada AND a Tacto on the same day, she is still active.
         if (isActive && chronoEvents.length > 0) {
-            const latestEvent = chronoEvents[0];
-            if (latestEvent.type.toUpperCase().includes('PESADA') && latestEvent.weight === null && latestEvent.gdm === null) {
+            const latestDate = chronoEvents[0].date.getTime();
+            const eventsOnLatestDate = chronoEvents.filter(e => e.date.getTime() === latestDate);
+
+            const hasReproEventOnLatestDate = eventsOnLatestDate.some(e => !e.type.toUpperCase().includes('PESADA'));
+            const allLatestAreEmptyPesadas = eventsOnLatestDate.every(e =>
+                e.type.toUpperCase().includes('PESADA') && e.weight === null && e.gdm === null
+            );
+
+            if (allLatestAreEmptyPesadas && !hasReproEventOnLatestDate) {
                 isActive = false;
             }
         }
