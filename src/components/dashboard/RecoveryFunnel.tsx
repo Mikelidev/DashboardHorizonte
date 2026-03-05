@@ -10,7 +10,7 @@ import { EvolutionTransition } from '@/lib/analytics-engine';
 type TimeFilter = 'T1_T2' | 'T2_FINAL' | 'T1_FINAL';
 
 export default function RecoveryFunnel() {
-    const { animals } = useDashboard();
+    const { animals, setActiveProfileIde } = useDashboard();
     const [filter, setFilter] = useState<TimeFilter>('T1_T2');
 
     // UI State for Details Sheet
@@ -259,18 +259,28 @@ export default function RecoveryFunnel() {
                         ) : (
                             <div className="space-y-3">
                                 {sheetData.list.map((item, idx) => (
-                                    <div key={item.ide + idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group">
-
+                                    <button
+                                        key={item.ide + idx}
+                                        onClick={() => {
+                                            // Assuming setActiveProfileIde is available in this component's scope
+                                            // If this component is a child, it would be passed as a prop.
+                                            // If this component is the dashboard itself, it would be destructured from useDashboard().
+                                            setActiveProfileIde(item.ide);
+                                            setIsSheetOpen(false);
+                                        }}
+                                        className="w-full text-left bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                                    >
                                         <div className="flex items-center justify-between">
-                                            <span className="font-mono text-sm font-semibold text-slate-800">{item.ide}</span>
+                                            <span className="font-mono text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{item.ide}</span>
+                                            <span className="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Ver Ficha</span>
                                         </div>
 
-                                        <div className="flex items-center gap-3 text-sm">
-                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-500 text-xs font-medium truncate">
+                                        <div className="flex items-center gap-3 text-sm mt-1">
+                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-500 text-xs font-medium truncate group-hover:bg-indigo-50/30 transition-colors">
                                                 {item.startState}
                                             </div>
-                                            <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
-                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-700 text-xs font-semibold truncate">
+                                            <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0 group-hover:text-indigo-300 transition-colors" />
+                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-700 text-xs font-semibold truncate group-hover:bg-indigo-50 transition-colors">
                                                 {item.endState}
                                             </div>
                                         </div>
@@ -280,7 +290,7 @@ export default function RecoveryFunnel() {
                                                 activeDetailType === 'LOST' ? 'bg-rose-500' :
                                                     'bg-slate-300'
                                             }`} />
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         )}
