@@ -250,51 +250,53 @@ export default function RecoveryFunnel() {
                         </SheetDescription>
                     </SheetHeader>
 
-                    <ScrollArea className="flex-1 -mx-6 px-6 py-4">
-                        {sheetData.list.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                                <HeartPulse className="w-12 h-12 mb-4 text-slate-200" />
-                                <p>No hay vaquillonas en esta categoría para el rango seleccionado.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {sheetData.list.map((item, idx) => (
-                                    <button
-                                        key={item.ide + idx}
-                                        onClick={() => {
-                                            // Assuming setActiveProfileIde is available in this component's scope
-                                            // If this component is a child, it would be passed as a prop.
-                                            // If this component is the dashboard itself, it would be destructured from useDashboard().
-                                            setActiveProfileIde(item.ide);
-                                            setIsSheetOpen(false);
-                                        }}
-                                        className="w-full text-left bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-mono text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{item.ide}</span>
-                                            <span className="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Ver Ficha</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-3 text-sm mt-1">
-                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-500 text-xs font-medium truncate group-hover:bg-indigo-50/30 transition-colors">
-                                                {item.startState}
+                    <div className="flex-1 min-h-0 -mx-6">
+                        <ScrollArea className="h-full px-6 py-4">
+                            {sheetData.list.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                                    <HeartPulse className="w-12 h-12 mb-4 text-slate-200" />
+                                    <p>No hay vaquillonas en esta categoría para el rango seleccionado.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {sheetData.list.map((item, idx) => (
+                                        <button
+                                            key={item.ide + idx}
+                                            onClick={() => {
+                                                // Assuming setActiveProfileIde is available in this component's scope
+                                                // If this component is a child, it would be passed as a prop.
+                                                // If this component is the dashboard itself, it would be destructured from useDashboard().
+                                                setActiveProfileIde(item.ide);
+                                                setIsSheetOpen(false);
+                                            }}
+                                            className="w-full text-left bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-mono text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{item.ide}</span>
+                                                <span className="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Ver Ficha</span>
                                             </div>
-                                            <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0 group-hover:text-indigo-300 transition-colors" />
-                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-700 text-xs font-semibold truncate group-hover:bg-indigo-50 transition-colors">
-                                                {item.endState}
-                                            </div>
-                                        </div>
 
-                                        {/* Colored Accent Bar depending on transition type */}
-                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${activeDetailType === 'RECOVERED' ? 'bg-emerald-500' :
+                                            <div className="flex items-center gap-3 text-sm mt-1">
+                                                <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-500 text-xs font-medium truncate group-hover:bg-indigo-50/30 transition-colors">
+                                                    {item.startState}
+                                                </div>
+                                                <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0 group-hover:text-indigo-300 transition-colors" />
+                                                <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-700 text-xs font-semibold truncate group-hover:bg-indigo-50 transition-colors">
+                                                    {item.endState}
+                                                </div>
+                                            </div>
+
+                                            {/* Colored Accent Bar depending on transition type */}
+                                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${activeDetailType === 'RECOVERED' ? 'bg-emerald-500' :
                                                 activeDetailType === 'LOST' ? 'bg-rose-500' :
                                                     'bg-slate-300'
-                                            }`} />
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </ScrollArea>
+                                                }`} />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </div>
                 </SheetContent>
             </Sheet>
 
