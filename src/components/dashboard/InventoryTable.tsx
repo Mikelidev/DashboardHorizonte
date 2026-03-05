@@ -7,6 +7,7 @@ import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
+import { ScrollArea } from '../ui/scroll-area';
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortConfig = { key: string, direction: SortDirection };
@@ -73,94 +74,96 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
             </CardHeader>
             <CardContent>
                 <div className="rounded-xl border border-slate-200 overflow-hidden bg-white/50">
-                    <Table>
-                        <TableHeader className="bg-slate-50/80 hover:bg-slate-50/80 border-b border-slate-200">
-                            <TableRow className="border-b-0 hover:bg-transparent">
-                                <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('ide')}>
-                                    IDE {getSortIcon('ide')}
-                                </TableHead>
-                                <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('raza')}>
-                                    Raza {getSortIcon('raza')}
-                                </TableHead>
-                                <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('padre')}>
-                                    Padre {getSortIcon('padre')}
-                                </TableHead>
-                                <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('currentWeight')}>
-                                    Peso Actual {getSortIcon('currentWeight')}
-                                </TableHead>
-                                <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('currentGdm')}>
-                                    GDM Acum. {getSortIcon('currentGdm')}
-                                </TableHead>
-                                <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('reproductiveState')}>
-                                    Reproductivo {getSortIcon('reproductiveState')}
-                                </TableHead>
-                                <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('daysToTarget')}>
-                                    Dias P/Obj. {getSortIcon('daysToTarget')}
-                                </TableHead>
-                                <TableHead className="text-slate-500 font-semibold h-12 text-right cursor-pointer select-none" onClick={() => handleSort('scoreTotal')}>
-                                    Score {getSortIcon('scoreTotal')}
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filtered.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={8} className="text-center h-32 text-slate-500 bg-white">
-                                        No se encontraron animales.
-                                    </TableCell>
+                    <ScrollArea className="h-[650px]">
+                        <Table>
+                            <TableHeader className="bg-slate-50/80 hover:bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10 backdrop-blur-md shadow-sm">
+                                <TableRow className="border-b-0 hover:bg-transparent">
+                                    <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('ide')}>
+                                        IDE {getSortIcon('ide')}
+                                    </TableHead>
+                                    <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('raza')}>
+                                        Raza {getSortIcon('raza')}
+                                    </TableHead>
+                                    <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('padre')}>
+                                        Padre {getSortIcon('padre')}
+                                    </TableHead>
+                                    <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('currentWeight')}>
+                                        Peso Actual {getSortIcon('currentWeight')}
+                                    </TableHead>
+                                    <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('currentGdm')}>
+                                        GDM Acum. {getSortIcon('currentGdm')}
+                                    </TableHead>
+                                    <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('reproductiveState')}>
+                                        Reproductivo {getSortIcon('reproductiveState')}
+                                    </TableHead>
+                                    <TableHead className="text-slate-500 font-semibold h-12 cursor-pointer select-none" onClick={() => handleSort('daysToTarget')}>
+                                        Dias P/Obj. {getSortIcon('daysToTarget')}
+                                    </TableHead>
+                                    <TableHead className="text-slate-500 font-semibold h-12 text-right cursor-pointer select-none" onClick={() => handleSort('scoreTotal')}>
+                                        Score {getSortIcon('scoreTotal')}
+                                    </TableHead>
                                 </TableRow>
-                            ) : (
-                                sortedAnimals.slice(0, 100).map(animal => ( // Limit to 100 for render perf in this demo
-                                    <TableRow key={animal.ide} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-white">
-                                        <TableCell
-                                            className="font-bold text-indigo-600 cursor-pointer hover:underline"
-                                            onClick={() => {
-                                                setActiveProfileIde(animal.ide);
-                                                if (onViewChange) onViewChange('profile');
-                                            }}
-                                        >
-                                            {animal.ide}
+                            </TableHeader>
+                            <TableBody>
+                                {filtered.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center h-32 text-slate-500 bg-white">
+                                            No se encontraron animales.
                                         </TableCell>
-                                        <TableCell className="text-slate-600">{animal.raza}</TableCell>
-                                        <TableCell className="text-slate-600 font-medium">{animal.padre}</TableCell>
-                                        <TableCell className="text-slate-600">{animal.currentWeight} <span className="text-slate-400 text-xs">kg</span></TableCell>
-                                        <TableCell>
-                                            <span className={`font-semibold ${animal.currentGdm !== null && animal.currentGdm < 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                                                {animal.currentGdm?.toFixed(3) || '-'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>
-                                            {animal.reproductiveState ? (
-                                                <Badge variant="outline" className={`font-medium border-transparent
+                                    </TableRow>
+                                ) : (
+                                    sortedAnimals.map(animal => (
+                                        <TableRow key={animal.ide} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-white">
+                                            <TableCell
+                                                className="font-bold text-indigo-600 cursor-pointer hover:underline"
+                                                onClick={() => {
+                                                    setActiveProfileIde(animal.ide);
+                                                    if (onViewChange) onViewChange('profile');
+                                                }}
+                                            >
+                                                {animal.ide}
+                                            </TableCell>
+                                            <TableCell className="text-slate-600">{animal.raza}</TableCell>
+                                            <TableCell className="text-slate-600 font-medium">{animal.padre}</TableCell>
+                                            <TableCell className="text-slate-600">{animal.currentWeight} <span className="text-slate-400 text-xs">kg</span></TableCell>
+                                            <TableCell>
+                                                <span className={`font-semibold ${animal.currentGdm !== null && animal.currentGdm < 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                                    {animal.currentGdm?.toFixed(3) || '-'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                {animal.reproductiveState ? (
+                                                    <Badge variant="outline" className={`font-medium border-transparent
                           ${animal.reproductiveState.includes('PREÑADA') ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : ''}
                           ${animal.reproductiveState.includes('SUPERFICIAL') ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : ''}
                           ${animal.reproductiveState.includes('PROFUNDO') ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : ''}
                         `}>
-                                                    {animal.reproductiveState}
-                                                </Badge>
-                                            ) : '-'}
-                                        </TableCell>
-                                        <TableCell>
-                                            {animal.daysToTarget !== null ? (
-                                                <span className={`${animal.alertYellow ? 'text-amber-600 font-bold' : 'text-slate-600'}`}>
-                                                    {animal.daysToTarget} <span className="text-xs text-slate-400 font-normal">días</span>
-                                                </span>
-                                            ) : <span className="text-slate-400">-</span>}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end gap-2 text-slate-800">
-                                                {animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" title="Alerta Crítica"></span>}
-                                                {animal.alertYellow && !animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" title="Alerta Retraso IATF"></span>}
-                                                <span className="font-bold text-lg">{animal.scoreTotal}</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                                        {animal.reproductiveState}
+                                                    </Badge>
+                                                ) : '-'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {animal.daysToTarget !== null ? (
+                                                    <span className={`${animal.alertYellow ? 'text-amber-600 font-bold' : 'text-slate-600'}`}>
+                                                        {animal.daysToTarget} <span className="text-xs text-slate-400 font-normal">días</span>
+                                                    </span>
+                                                ) : <span className="text-slate-400">-</span>}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-2 text-slate-800">
+                                                    {animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" title="Alerta Crítica"></span>}
+                                                    {animal.alertYellow && !animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" title="Alerta Retraso IATF"></span>}
+                                                    <span className="font-bold text-lg">{animal.scoreTotal}</span>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
                 </div>
-                <div className="mt-4 text-sm font-medium text-slate-500 text-right pr-2">Mostrando {Math.min(sortedAnimals.length, 100)} de {sortedAnimals.length}</div>
+                <div className="mt-4 text-sm font-medium text-slate-500 text-right pr-2">Mostrando {sortedAnimals.length} animales activos</div>
             </CardContent>
         </Card>
     );
