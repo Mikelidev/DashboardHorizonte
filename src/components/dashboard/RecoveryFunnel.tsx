@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from './DashboardContext';
 import { calculateEvolution, EvolutionMetrics } from '@/lib/analytics-engine';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,6 +31,41 @@ export default function RecoveryFunnel() {
 
     const hasData = stats.totalAnalyzed > 0;
 
+    // Temporal Availability Logic
+    const [hasT2Event, setHasT2Event] = useState(false);
+    const [hasFinalEvent, setHasFinalEvent] = useState(false);
+
+    useEffect(() => {
+        let foundT2 = false;
+        let foundFinal = false;
+
+        for (const an of animals) {
+            for (const ev of an.eventos) {
+                const typeStr = ev.type.toUpperCase();
+                // Check if this specific snapshot includes Tacto 2
+                if (typeStr.includes('TACTO 2') || (typeStr.includes('TACTO ANESTRO') && ev.eventNumber === 2)) foundT2 = true;
+                // Check if this specific snapshot includes Final/IATF metrics
+                if (typeStr.includes('IATF') || typeStr.includes('SERVICIO')) foundFinal = true;
+
+                if (foundT2 && foundFinal) break;
+            }
+            if (foundT2 && foundFinal) break;
+        }
+
+        setHasT2Event(foundT2);
+        setHasFinalEvent(foundFinal);
+
+        // Fallback logic if the temporal machine rewinds and disables the active tab
+        if (!foundT2 && !foundFinal) {
+            // Nothing is really available yet to show evolution
+            if (filter !== 'T1_T2') setFilter('T1_T2'); // Reset to default
+        } else if (foundT2 && !foundFinal) {
+            // Only T1->T2 is allowed
+            if (filter === 'T2_FINAL' || filter === 'T1_FINAL') setFilter('T1_T2');
+        }
+
+    }, [animals, filter]);
+
     return (
         <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-3xl p-8 shadow-sm col-span-1 md:col-span-2 flex flex-col gap-6">
 
@@ -44,19 +79,30 @@ export default function RecoveryFunnel() {
                 </div>
 
                 {/* Tab Filters */}
-                <div className="flex bg-slate-100/80 p-1.5 rounded-xl self-start">
-                    {(Object.keys(filterLabels) as TimeFilter[]).map((key) => (
-                        <button
-                            key={key}
-                            onClick={() => setFilter(key)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${filter === key
-                                ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-                                }`}
-                        >
-                            {key === 'T1_T2' ? 'T1 ➔ T2' : key === 'T2_FINAL' ? 'T2 ➔ Final' : 'T1 ➔ Final'}
-                        </button>
-                    ))}
+                <div className="flex bg-slate-100/80 p-1.5 rounded-xl self-start overflow-x-auto max-w-full">
+                    {(Object.keys(filterLabels) as TimeFilter[]).map((key) => {
+                        const isDisabled =
+                            (!hasT2Event && !hasFinalEvent) ||
+                            (key === 'T2_FINAL' && !hasFinalEvent) ||
+                            (key === 'T1_FINAL' && !hasFinalEvent);
+
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => !isDisabled && setFilter(key)}
+                                disabled={isDisabled}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap
+                                    ${isDisabled
+                                        ? 'text-slate-300 cursor-not-allowed opacity-60'
+                                        : filter === key
+                                            ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50'
+                                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                    }`}
+                            >
+                                {key === 'T1_T2' ? 'T1 ➔ T2' : key === 'T2_FINAL' ? 'T2 ➔ Final' : 'T1 ➔ Final'}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -64,9 +110,17 @@ export default function RecoveryFunnel() {
                 {filterLabels[filter]}
             </div>
 
-            {!hasData ? (
+            {(!hasT2Event && !hasFinalEvent) ? (
+                <div className="py-12 text-center bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center gap-3">
+                    <HeartPulse className="w-8 h-8 text-slate-300" />
+                    <div className="max-w-md">
+                        <p className="text-slate-500 font-medium">Cronología demasiado temprana</p>
+                        <p className="text-xs text-slate-400 mt-1">El rodeo seleccionado aún no ha registrado el Segundo Tacto o fechas de Inseminación Artificial para calcular evoluciones.</p>
+                    </div>
+                </div>
+            ) : !hasData ? (
                 <div className="py-12 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-slate-100">
-                    No hay suficientes datos secuenciales para analizar la evolución en este período.
+                    No hay suficientes datos secuenciales para analizar la evolución en este período específico.
                 </div>
             ) : (
                 <div className="relative pt-4 pb-8 px-4 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 overflow-hidden">
