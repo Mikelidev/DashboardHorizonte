@@ -16,6 +16,8 @@ interface DashboardContextProps {
     isLoading: boolean;
     activeProfileIde: string | null;
     setActiveProfileIde: (ide: string | null) => void;
+    activeSireId: string | null;
+    setActiveSireId: (id: string | null) => void;
 }
 
 const defaultSettings: ThresholdSettings = {
@@ -38,6 +40,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     const [rawEventos, setRawEventos] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [activeProfileIde, setActiveProfileIde] = useState<string | null>(null);
+    const [activeSireId, setActiveSireId] = useState<string | null>(null);
 
     const loadDataFiles = (animalesCsv: string, eventosCsv: string) => {
         setIsLoading(true);
@@ -67,7 +70,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
         <DashboardContext.Provider value={{
             settings, setSettings, animals, availableSnapshots,
             selectedSnapshot, setSelectedSnapshot, anomalies, loadDataFiles, isLoading,
-            activeProfileIde, setActiveProfileIde
+            activeProfileIde, setActiveProfileIde, activeSireId, setActiveSireId
         }}>
             {children}
         </DashboardContext.Provider>

@@ -13,6 +13,7 @@ export default function Sidebar({ currentView, setCurrentView }: SidebarProps) {
     const navItems = [
         { id: 'dashboard', label: 'Monitor Predictivo', icon: Home },
         { id: 'profile', label: 'Ficha Médica', icon: ClipboardList },
+        { id: 'sire-profile', label: 'Ficha del Padre', icon: Dna },
         { id: 'productividad', label: 'Crecimiento y Eficiencia', icon: Activity },
         { id: 'forecast', label: 'Proyección IATF', icon: Target },
         { id: 'alertas', label: 'Alertas y Excepciones', icon: AlertTriangle },

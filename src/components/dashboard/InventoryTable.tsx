@@ -6,17 +6,30 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
-import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
+import { ArrowDown, ArrowUp, Minus, Dna } from 'lucide-react';
+import { ScrollArea, ScrollBar } from '../ui/scroll-area';
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortConfig = { key: string, direction: SortDirection };
 
 export default function InventoryTable({ onViewChange }: { onViewChange?: (view: string) => void }) {
-    const { animals, setActiveProfileIde } = useDashboard();
+    const { animals, setActiveProfileIde, setActiveSireId } = useDashboard();
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: '', direction: null });
 
     const activeAnimals = animals.filter(a => a.isActive);
+
+    const padresActivos = React.useMemo(() => {
+        const counts: Record<string, number> = {};
+        activeAnimals.forEach(a => {
+            if (a.padre) {
+                counts[a.padre] = (counts[a.padre] || 0) + 1;
+            }
+        });
+        return Object.entries(counts)
+            .map(([padre, count]) => ({ padre, count }))
+            .sort((a, b) => b.count - a.count); // Sort by most offspring
+    }, [activeAnimals]);
 
     const filtered = activeAnimals.filter(a =>
         a.ide.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -60,7 +73,7 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
 
     return (
         <Card className="glass border-transparent text-slate-800 min-h-[600px] shadow-sm">
-            <CardHeader className="pb-6 border-b border-slate-200/50 mb-4">
+            <CardHeader className="pb-6 border-b border-slate-200/50 mb-0">
                 <CardTitle className="text-2xl font-extrabold tracking-tight text-slate-800">Inventario Pro (Cabezas Activas)</CardTitle>
                 <div className="mt-4">
                     <Input
@@ -71,7 +84,36 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
                     />
                 </div>
             </CardHeader>
-            <CardContent>
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200/50">
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Dna className="w-4 h-4 text-indigo-400" />
+                    Padres Activos
+                </h4>
+                <ScrollArea className="w-full whitespace-nowrap pb-4">
+                    <div className="flex w-max space-x-4">
+                        {padresActivos.map((p) => (
+                            <div
+                                key={p.padre}
+                                onClick={() => {
+                                    setActiveSireId(p.padre);
+                                    if (onViewChange) onViewChange('sire-profile');
+                                }}
+                                className="inline-flex items-center gap-3 bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md cursor-pointer transition-all rounded-xl p-3 px-5 group"
+                            >
+                                <div className="bg-indigo-50 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    <Dna className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <p className="font-extrabold text-slate-800 group-hover:text-indigo-700 transition-colors">{p.padre}</p>
+                                    <p className="text-xs font-semibold text-slate-400">{p.count} crías hijas</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+            </div>
+            <CardContent className="pt-6">
                 <div className="rounded-xl border border-slate-200 overflow-hidden bg-white/50 h-[650px] overflow-y-auto relative outline-none rounded-t-xl">
                     <table className="w-full caption-bottom text-sm relative">
                         <thead className="bg-slate-50/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 shadow-sm [&_tr]:border-b-0">

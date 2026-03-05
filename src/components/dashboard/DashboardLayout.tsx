@@ -12,6 +12,7 @@ import ProductivityView from './ProductivityView';
 import ReproductiveForecast from './ReproductiveForecast';
 import ExceptionManagement from './ExceptionManagement';
 import AnimalProfile from './AnimalProfile';
+import SireProfile from './SireProfile';
 import ConfigPanel from './ConfigPanel';
 import InventoryTable from './InventoryTable';
 import { useDashboard } from './DashboardContext';
@@ -117,6 +118,9 @@ export default function DashboardLayout() {
                         )}
                         {currentView === 'profile' && (
                             <AnimalProfile />
+                        )}
+                        {currentView === 'sire-profile' && (
+                            <SireProfile onViewChange={setCurrentView} />
                         )}
                         {currentView === 'inventory' && (
                             <InventoryTable onViewChange={setCurrentView} />

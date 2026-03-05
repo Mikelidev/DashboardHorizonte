@@ -5,8 +5,8 @@ import { useDashboard } from './DashboardContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-export default function SireRankings() {
-    const { animals, settings } = useDashboard();
+export default function SireRankings({ onViewChange }: { onViewChange?: (view: string) => void }) {
+    const { animals, settings, setActiveSireId } = useDashboard();
 
     const data = useMemo(() => {
         const active = animals.filter(a => a.isActive && a.currentGdm !== null);
@@ -70,6 +70,14 @@ export default function SireRankings() {
                             radius={[6, 6, 0, 0]}
                             isAnimationActive={true}
                             animationDuration={1500}
+                            onClick={(data: any) => {
+                                const padre = data?.payload?.padre || data?.padre;
+                                if (padre) {
+                                    setActiveSireId(padre);
+                                    if (onViewChange) onViewChange('sire-profile');
+                                }
+                            }}
+                            className="cursor-pointer"
                         >
                             {data.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.avgGdm >= settings.gdmOpt ? '#10b981' : entry.avgGdm >= settings.gdmMin ? '#fbbf24' : '#ea580c'} />

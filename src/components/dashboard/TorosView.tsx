@@ -26,8 +26,8 @@ const METRICS: MetricOption[] = [
     { id: 'pesoPromedio', label: 'Peso Promedio', format: v => `${v.toFixed(1)} kg`, color: '#0ea5e9' }
 ];
 
-export default function TorosView() {
-    const { animals } = useDashboard();
+export default function TorosView({ onViewChange }: { onViewChange?: (view: string) => void }) {
+    const { animals, setActiveSireId } = useDashboard();
     const analytics = useMemo(() => calculateSireAnalytics(animals), [animals]);
     const [selectedMetric, setSelectedMetric] = useState<MetricKey>('totalBiomasa');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: '', direction: null });
@@ -113,7 +113,19 @@ export default function TorosView() {
                                 formatter={(value: any) => [activeMetricOpt.format(value as number), activeMetricOpt.label]}
                                 labelStyle={{ fontWeight: 'bold', color: '#334155', marginBottom: '4px' }}
                             />
-                            <Bar dataKey={selectedMetric} radius={[6, 6, 0, 0]} animationDuration={1000}>
+                            <Bar
+                                dataKey={selectedMetric}
+                                radius={[6, 6, 0, 0]}
+                                animationDuration={1000}
+                                className="cursor-pointer"
+                                onClick={(data: any) => {
+                                    const padre = data?.payload?.padre || data?.padre;
+                                    if (padre) {
+                                        setActiveSireId(padre);
+                                        if (onViewChange) onViewChange('sire-profile');
+                                    }
+                                }}
+                            >
                                 {chartData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={activeMetricOpt.color} />
                                 ))}
@@ -169,7 +181,19 @@ export default function TorosView() {
                             <ReferenceLine y={60} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'top', value: 'Umbral Mínimo 60%', fill: '#f59e0b', fontSize: 10 }} />
                             <ReferenceLine y={80} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'insideBottomRight', value: 'Élite >= 80%', fill: '#10b981', fontSize: 10 }} />
 
-                            <Scatter name="Padres" data={analytics} fill="#8b5cf6">
+                            <Scatter
+                                name="Padres"
+                                data={analytics}
+                                fill="#8b5cf6"
+                                className="cursor-pointer"
+                                onClick={(data: any) => {
+                                    const padre = data?.payload?.padre || data?.padre || data?.name;
+                                    if (padre) {
+                                        setActiveSireId(padre);
+                                        if (onViewChange) onViewChange('sire-profile');
+                                    }
+                                }}
+                            >
                                 {analytics.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.porcentajePrenadas >= 80 ? '#10b981' : entry.porcentajePrenadas >= 60 ? '#f59e0b' : '#f43f5e'} />
                                 ))}
@@ -217,7 +241,13 @@ export default function TorosView() {
                                     transition={{ delay: idx * 0.05 }}
                                     className="hover:bg-slate-50/50 transition-colors duration-200"
                                 >
-                                    <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-800">
+                                    <td
+                                        className="px-6 py-4 whitespace-nowrap font-bold text-indigo-600 cursor-pointer hover:underline"
+                                        onClick={() => {
+                                            setActiveSireId(sire.padre);
+                                            if (onViewChange) onViewChange('sire-profile');
+                                        }}
+                                    >
                                         {sire.padre}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right font-medium text-slate-600">
