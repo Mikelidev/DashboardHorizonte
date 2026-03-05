@@ -5,7 +5,11 @@ import { motion } from 'framer-motion';
 import { Activity } from 'lucide-react';
 import GlobalReproductiveCard from './GlobalReproductiveCard';
 
-export default function ReproductiveDataView() {
+interface ViewProps {
+    onViewChange?: (view: string) => void;
+}
+
+export default function ReproductiveDataView({ onViewChange }: ViewProps = {}) {
     const { animals } = useDashboard();
 
     return (
@@ -32,7 +36,7 @@ export default function ReproductiveDataView() {
                     transition={{ delay: 0.1 }}
                     className="col-span-1 md:col-span-2 h-full"
                 >
-                    <RecoveryFunnel />
+                    <RecoveryFunnel onViewChange={onViewChange} />
                 </motion.div>
 
             </div>

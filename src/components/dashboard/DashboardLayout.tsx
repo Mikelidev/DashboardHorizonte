@@ -107,7 +107,7 @@ export default function DashboardLayout() {
                             <TorosView onViewChange={setCurrentView} />
                         )}
                         {currentView === 'reproduccion' && (
-                            <ReproductiveDataView />
+                            <ReproductiveDataView onViewChange={setCurrentView} />
                         )}
                         {currentView === 'productividad' && (
                             <ProductivityView />
@@ -116,7 +116,7 @@ export default function DashboardLayout() {
                             <ReproductiveForecast />
                         )}
                         {currentView === 'alertas' && (
-                            <ExceptionManagement />
+                            <ExceptionManagement onViewChange={setCurrentView} />
                         )}
                         {currentView === 'profile' && (
                             <AnimalProfile onViewChange={setCurrentView} />

@@ -9,7 +9,11 @@ import { EvolutionTransition } from '@/lib/analytics-engine';
 
 type TimeFilter = 'T1_T2' | 'T2_FINAL' | 'T1_FINAL';
 
-export default function RecoveryFunnel() {
+interface FunnelProps {
+    onViewChange?: (view: string) => void;
+}
+
+export default function RecoveryFunnel({ onViewChange }: FunnelProps = {}) {
     const { animals, setActiveProfileIde } = useDashboard();
     const [filter, setFilter] = useState<TimeFilter>('T1_T2');
 
@@ -308,6 +312,7 @@ export default function RecoveryFunnel() {
                                                 // If this component is the dashboard itself, it would be destructured from useDashboard().
                                                 setActiveProfileIde(item.ide);
                                                 setIsSheetOpen(false);
+                                                if (onViewChange) onViewChange('profile');
                                             }}
                                             className="w-full text-left bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
                                         >

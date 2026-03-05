@@ -6,7 +6,7 @@ import { ProcessedAnimal } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 import AlertCards from './AlertCards';
 
-function AnomalyCategoryGroup({ category, items, setActiveProfileIde }: { category: string, items: any[], setActiveProfileIde: (ide: string) => void }) {
+function AnomalyCategoryGroup({ category, items, setActiveProfileIde, onViewChange }: { category: string, items: any[], setActiveProfileIde: (ide: string) => void, onViewChange?: (view: string) => void }) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     return (
@@ -47,7 +47,10 @@ function AnomalyCategoryGroup({ category, items, setActiveProfileIde }: { catego
                                         <tr key={`${ano.ide}-${i}`} className="hover:bg-indigo-50/50 transition-colors">
                                             <td
                                                 className="py-3 px-4 font-mono font-bold text-indigo-600 whitespace-nowrap cursor-pointer hover:underline"
-                                                onClick={() => setActiveProfileIde(ano.ide)}
+                                                onClick={() => {
+                                                    setActiveProfileIde(ano.ide);
+                                                    if (onViewChange) onViewChange('profile');
+                                                }}
                                             >
                                                 {ano.ide}
                                             </td>
@@ -301,7 +304,7 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
                                 className="space-y-6 overflow-hidden"
                             >
                                 {Object.entries(groupedAnomalies).map(([category, items]) => (
-                                    <AnomalyCategoryGroup key={category} category={category} items={items} setActiveProfileIde={setActiveProfileIde} />
+                                    <AnomalyCategoryGroup key={category} category={category} items={items} setActiveProfileIde={setActiveProfileIde} onViewChange={onViewChange} />
                                 ))}
                             </motion.div>
                         )}
