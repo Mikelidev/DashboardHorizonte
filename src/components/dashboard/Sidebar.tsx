@@ -10,17 +10,31 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentView, setCurrentView }: SidebarProps) {
-    const navItems = [
-        { id: 'dashboard', label: 'Monitor Predictivo', icon: Home },
-        { id: 'profile', label: 'Ficha Médica', icon: ClipboardList },
-        { id: 'sire-profile', label: 'Ficha del Padre', icon: Dna },
-        { id: 'productividad', label: 'Crecimiento y Eficiencia', icon: Activity },
-        { id: 'forecast', label: 'Proyección IATF', icon: Target },
-        { id: 'alertas', label: 'Alertas y Excepciones', icon: AlertTriangle },
-        { id: 'toros', label: 'Ranking Toros', icon: Dna },
-        { id: 'reproduccion', label: 'Datos Reproductivos', icon: HeartPulse },
-        { id: 'inventory', label: 'Inventario de Rodeo', icon: List },
-        { id: 'config', label: 'Configuración de Semáforos', icon: Settings },
+    const navGroups = [
+        {
+            title: 'GENERAL',
+            items: [
+                { id: 'dashboard', label: 'Resumen', icon: Home },
+                { id: 'inventory', label: 'Inventario del Rodeo', icon: List },
+                { id: 'toros', label: 'Rankings', icon: Dna },
+                { id: 'profile', label: 'Trazabilidad', icon: ClipboardList },
+            ]
+        },
+        {
+            title: 'ANÁLISIS Y REPORTES',
+            items: [
+                { id: 'productividad', label: 'Productividad', icon: Activity },
+                { id: 'reproduccion', label: 'Datos Reproductivos', icon: HeartPulse },
+                { id: 'forecast', label: 'Proyección IATF', icon: Target },
+            ]
+        },
+        {
+            title: 'CONTROL Y CALIDAD',
+            items: [
+                { id: 'alertas', label: 'Anomalías', icon: AlertTriangle },
+                { id: 'config', label: 'Umbrales', icon: Settings },
+            ]
+        }
     ];
 
     return (
@@ -32,26 +46,35 @@ export default function Sidebar({ currentView, setCurrentView }: SidebarProps) {
                 <h1 className="text-2xl font-extrabold tracking-tight text-slate-800">Horizonte<span className="text-emerald-500">Ag</span></h1>
             </div>
 
-            <nav className="flex-1 py-8 flex flex-col gap-3 px-4">
-                {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = currentView === item.id;
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => setCurrentView(item.id)}
-                            className={clsx(
-                                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300",
-                                isActive
-                                    ? "bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100"
-                                    : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800"
-                            )}
-                        >
-                            <Icon className={clsx("w-5 h-5", isActive ? "text-emerald-600" : "text-slate-400")} />
-                            {item.label}
-                        </button>
-                    );
-                })}
+            <nav className="flex-1 py-8 flex flex-col gap-6 px-4 overflow-y-auto custom-scrollbar">
+                {navGroups.map((group, idx) => (
+                    <div key={idx} className="flex flex-col">
+                        <h3 className="px-4 text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">
+                            {group.title}
+                        </h3>
+                        <div className="flex flex-col gap-1">
+                            {group.items.map((item) => {
+                                const Icon = item.icon;
+                                const isActive = currentView === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setCurrentView(item.id)}
+                                        className={clsx(
+                                            "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300",
+                                            isActive
+                                                ? "bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100"
+                                                : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-800"
+                                        )}
+                                    >
+                                        <Icon className={clsx("w-5 h-5", isActive ? "text-emerald-600" : "text-slate-400")} />
+                                        {item.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
             </nav>
 
             <div className="p-6 mt-auto">
