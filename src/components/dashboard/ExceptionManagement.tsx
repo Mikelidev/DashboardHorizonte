@@ -5,6 +5,61 @@ import { AlertCircle, ArrowDown, ArrowUp, Activity, CheckCircle2, XCircle, Chevr
 import { ProcessedAnimal } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 
+function AnomalyCategoryGroup({ category, items }: { category: string, items: any[] }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="bg-white/40 rounded-xl overflow-hidden shadow-sm border border-indigo-100/50 opacity-95 hover:opacity-100 transition-opacity">
+            <div
+                className="bg-indigo-100/50 px-4 py-3 flex items-center justify-between border-b border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors select-none"
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                <div className="flex items-center gap-3">
+                    <h4 className="font-bold text-indigo-900">{category}</h4>
+                    <span className="text-xs font-bold bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full">{items.length}</span>
+                </div>
+                <div className="text-indigo-400">
+                    {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <ScrollArea className="h-[280px]">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-indigo-100">
+                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-32">IDE</th>
+                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Descripción</th>
+                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-48">Ubicación</th>
+                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-64">Posible Causa</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y text-sm divide-indigo-50">
+                                    {items.map((ano, i) => (
+                                        <tr key={`${ano.ide}-${i}`} className="hover:bg-indigo-50/50 transition-colors">
+                                            <td className="py-3 px-4 font-mono font-bold text-indigo-900 whitespace-nowrap">{ano.ide}</td>
+                                            <td className="py-3 px-4 text-slate-800 break-words">{ano.desc}</td>
+                                            <td className="py-3 px-4 text-slate-600 whitespace-nowrap"><span className="bg-white/60 px-2 py-1 rounded text-xs font-mono">{ano.location}</span></td>
+                                            <td className="py-3 px-4 text-slate-600 italic break-words">{ano.cause}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </ScrollArea>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 export default function ExceptionManagement() {
     const { animals, settings, anomalies } = useDashboard();
     const [isQaExpanded, setIsQaExpanded] = useState(false);
@@ -211,34 +266,7 @@ export default function ExceptionManagement() {
                                 className="space-y-6 overflow-hidden"
                             >
                                 {Object.entries(groupedAnomalies).map(([category, items]) => (
-                                    <div key={category} className="bg-white/40 rounded-xl overflow-hidden shadow-sm border border-indigo-100/50">
-                                        <div className="bg-indigo-100/50 px-4 py-3 flex items-center justify-between border-b border-indigo-100">
-                                            <h4 className="font-bold text-indigo-800">{category}</h4>
-                                            <span className="text-xs font-bold bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full">{items.length}</span>
-                                        </div>
-                                        <ScrollArea className="h-[280px]">
-                                            <table className="w-full text-left border-collapse">
-                                                <thead>
-                                                    <tr className="border-b border-indigo-100">
-                                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-32">IDE</th>
-                                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Descripción</th>
-                                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-48">Ubicación</th>
-                                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-64">Posible Causa</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y text-sm divide-indigo-50">
-                                                    {items.map((ano, i) => (
-                                                        <tr key={`${ano.ide}-${i}`} className="hover:bg-indigo-50/50 transition-colors">
-                                                            <td className="py-3 px-4 font-mono font-bold text-indigo-900 whitespace-nowrap">{ano.ide}</td>
-                                                            <td className="py-3 px-4 text-slate-800 break-words">{ano.desc}</td>
-                                                            <td className="py-3 px-4 text-slate-600 whitespace-nowrap"><span className="bg-white/60 px-2 py-1 rounded text-xs font-mono">{ano.location}</span></td>
-                                                            <td className="py-3 px-4 text-slate-600 italic break-words">{ano.cause}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </ScrollArea>
-                                    </div>
+                                    <AnomalyCategoryGroup key={category} category={category} items={items} />
                                 ))}
                             </motion.div>
                         )}
