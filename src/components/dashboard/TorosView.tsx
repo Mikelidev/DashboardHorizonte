@@ -3,7 +3,8 @@ import { useDashboard } from './DashboardContext';
 import { calculateSireAnalytics, SireAnalytics } from '@/lib/analytics-engine';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Cell, ScatterChart, Scatter, ReferenceLine } from 'recharts';
-import { ArrowDown, ArrowUp, Minus, Info } from 'lucide-react';
+import { ArrowDown, ArrowUp, Minus, Info, Medal } from 'lucide-react';
+import TopBottomRankings from './TopBottomRankings';
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortConfig = { key: keyof SireAnalytics | '', direction: SortDirection };
@@ -289,6 +290,16 @@ export default function TorosView({ onViewChange }: { onViewChange?: (view: stri
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* Individual Quality Extremes */}
+            <div className="mt-8">
+                <div className="flex items-center gap-3 mb-4">
+                    <Medal className="w-7 h-7 text-indigo-500" />
+                    <h2 className="text-2xl font-bold text-slate-800">Ranking Individual de Vientres</h2>
+                </div>
+                <p className="text-slate-500 mb-6">Identificación de matrices de élite y pasajeras costosas basada en Performance Data Engine (PDE) y crecimiento.</p>
+                <TopBottomRankings onViewChange={onViewChange} />
             </div>
         </div>
     );
