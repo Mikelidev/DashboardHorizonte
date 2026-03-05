@@ -92,7 +92,11 @@ export function calculateSireAnalytics(animals: ProcessedAnimal[]): SireAnalytic
     return results;
 }
 
-// --- REPRODUCTIVE EVOLUTION MVP ---
+export interface EvolutionTransition {
+    ide: string;
+    startState: string;
+    endState: string;
+}
 
 export interface EvolutionMetrics {
     totalAnalyzed: number;
@@ -107,6 +111,17 @@ export interface EvolutionMetrics {
         noApta: number;
         ciclando: number;
         prenadas: number; // Includes P IATF, NATURAL, etc
+    };
+    details: {
+        recovered: EvolutionTransition[];
+        lost: EvolutionTransition[];
+        maintainedGood: EvolutionTransition[];
+        maintainedBad: EvolutionTransition[];
+    };
+    specificTransitions: {
+        asToPrenada: number;
+        apToPrenada: number;
+        ciclandoToAnestro: number;
     };
 }
 
@@ -169,7 +184,9 @@ export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: Evolut
         maintainedGood: 0,
         maintainedBad: 0,
         recoveryRate: 0,
-        initialDetails: { as: 0, ap: 0, noApta: 0, ciclando: 0, prenadas: 0 }
+        initialDetails: { as: 0, ap: 0, noApta: 0, ciclando: 0, prenadas: 0 },
+        details: { recovered: [], lost: [], maintainedGood: [], maintainedBad: [] },
+        specificTransitions: { asToPrenada: 0, apToPrenada: 0, ciclandoToAnestro: 0 }
     };
 
     for (const an of animals) {
@@ -186,7 +203,9 @@ export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: Evolut
             metrics.totalAnalyzed++;
 
             // Log Initial Details
-            const rawStart = startInfo.rawState;
+            const rawStart = startInfo.rawState || 'S/D';
+            const rawEnd = endInfo.rawState || 'S/D';
+
             if (rawStart.includes('SUPERFICIAL') || rawStart === 'AS') metrics.initialDetails.as++;
             else if (rawStart.includes('PROFUNDO') || rawStart === 'AP') metrics.initialDetails.ap++;
             else if (rawStart.includes('NO APTA')) metrics.initialDetails.noApta++;
@@ -195,10 +214,40 @@ export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: Evolut
 
             if (startState === 'BAD') initialBadCount++;
 
-            if (startState === 'BAD' && endState === 'GOOD') metrics.recoveredCount++;
-            else if (startState === 'GOOD' && endState === 'BAD') metrics.lostCount++;
-            else if (startState === 'GOOD' && endState === 'GOOD') metrics.maintainedGood++;
-            else if (startState === 'BAD' && endState === 'BAD') metrics.maintainedBad++;
+            const trans: EvolutionTransition = { ide: an.ide, startState: rawStart, endState: rawEnd };
+
+            if (startState === 'BAD' && endState === 'GOOD') {
+                metrics.recoveredCount++;
+                metrics.details.recovered.push(trans);
+
+                // Specific Check: AS -> Preñada
+                if ((rawStart === 'AS' || rawStart.includes('SUPERFICIAL')) && (rawEnd.includes('PRENADA') || rawEnd.includes('PREÑADA'))) {
+                    metrics.specificTransitions.asToPrenada++;
+                }
+                // Specific Check: AP -> Preñada
+                if ((rawStart === 'AP' || rawStart.includes('PROFUNDO')) && (rawEnd.includes('PRENADA') || rawEnd.includes('PREÑADA'))) {
+                    metrics.specificTransitions.apToPrenada++;
+                }
+
+            }
+            else if (startState === 'GOOD' && endState === 'BAD') {
+                metrics.lostCount++;
+                metrics.details.lost.push(trans);
+
+                // Specific Check: Ciclando -> Anestro (AS/AP)
+                if (rawStart.includes('CICLANDO') && (rawEnd === 'AS' || rawEnd === 'AP' || rawEnd.includes('SUPERFICIAL') || rawEnd.includes('PROFUNDO'))) {
+                    metrics.specificTransitions.ciclandoToAnestro++;
+                }
+
+            }
+            else if (startState === 'GOOD' && endState === 'GOOD') {
+                metrics.maintainedGood++;
+                metrics.details.maintainedGood.push(trans);
+            }
+            else if (startState === 'BAD' && endState === 'BAD') {
+                metrics.maintainedBad++;
+                metrics.details.maintainedBad.push(trans);
+            }
         }
     }
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from './DashboardContext';
 import { calculateEvolution, EvolutionMetrics } from '@/lib/analytics-engine';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, XCircle, HeartPulse, MinusCircle, FileText } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, XCircle, HeartPulse, MinusCircle, FileText, TrendingUp, TrendingDown } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EvolutionTransition } from '@/lib/analytics-engine';
@@ -232,6 +232,46 @@ export default function RecoveryFunnel() {
                             <span className="font-semibold text-sm">{stats.maintainedGood} Mantuvieron</span>
                         </button>
 
+                    </div>
+
+                </div>
+            )}
+
+            {/* SECONDARY SPECIFIC METRICS */}
+            {hasData && (hasT2Event || hasFinalEvent) && (
+                <div className="mt-2 pt-6 border-t border-slate-100 flex flex-col md:flex-row gap-4 justify-between">
+
+                    <div className="flex-1 bg-emerald-50/50 border border-emerald-100/50 p-4 rounded-2xl flex items-center justify-between group">
+                        <div>
+                            <p className="text-xs font-semibold text-emerald-600/80 uppercase tracking-wider mb-1">De AS a Preñada</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-black text-emerald-700">{stats.specificTransitions.asToPrenada}</span>
+                                <span className="text-sm text-emerald-600/60 font-medium">vaquillonas</span>
+                            </div>
+                        </div>
+                        <TrendingUp className="w-8 h-8 text-emerald-300 opacity-50 group-hover:scale-110 transition-transform" />
+                    </div>
+
+                    <div className="flex-1 bg-emerald-50/50 border border-emerald-100/50 p-4 rounded-2xl flex items-center justify-between group">
+                        <div>
+                            <p className="text-xs font-semibold text-emerald-600/80 uppercase tracking-wider mb-1">De AP a Preñada</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-black text-emerald-700">{stats.specificTransitions.apToPrenada}</span>
+                                <span className="text-sm text-emerald-600/60 font-medium">vaquillonas</span>
+                            </div>
+                        </div>
+                        <TrendingUp className="w-8 h-8 text-emerald-300 opacity-50 group-hover:scale-110 transition-transform" />
+                    </div>
+
+                    <div className="flex-1 bg-rose-50/50 border border-rose-100/50 p-4 rounded-2xl flex items-center justify-between group">
+                        <div>
+                            <p className="text-xs font-semibold text-rose-600/80 uppercase tracking-wider mb-1">De Ciclando a Anestro</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-black text-rose-700">{stats.specificTransitions.ciclandoToAnestro}</span>
+                                <span className="text-sm text-rose-600/60 font-medium">vaquillonas</span>
+                            </div>
+                        </div>
+                        <TrendingDown className="w-8 h-8 text-rose-300 opacity-50 group-hover:scale-110 transition-transform" />
                     </div>
 
                 </div>
