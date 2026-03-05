@@ -116,7 +116,7 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
             <CardContent className="pt-6">
                 <div className="rounded-xl border border-slate-200 overflow-hidden bg-white/50 h-[650px] overflow-y-auto relative outline-none rounded-t-xl">
                     <table className="w-full caption-bottom text-sm relative">
-                        <thead className="bg-slate-50/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 shadow-sm [&_tr]:border-b-0">
+                        <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-20 border-b border-slate-200 shadow-sm [&_tr]:border-b-0">
                             <TableRow className="hover:bg-transparent">
                                 <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('ide')}>
                                     IDE {getSortIcon('ide')}

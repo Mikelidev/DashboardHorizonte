@@ -204,11 +204,11 @@ export default function TorosView({ onViewChange }: { onViewChange?: (view: stri
             </div>
 
             {/* Detailed Table */}
-            <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-3xl shadow-sm overflow-hidden h-[500px] flex flex-col">
+                <div className="overflow-x-auto overflow-y-auto flex-1 relative outline-none">
                     <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                        <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-200 shadow-sm">
+                            <tr className="text-slate-500 text-xs uppercase tracking-wider">
                                 <th className="px-6 py-4 font-semibold cursor-pointer select-none" onClick={() => handleSort('padre')}>
                                     Padre {getSortIcon('padre')}
                                 </th>

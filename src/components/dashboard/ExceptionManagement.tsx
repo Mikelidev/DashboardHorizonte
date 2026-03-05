@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useDashboard } from './DashboardContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ArrowDown, ArrowUp, Activity, CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, Minus, Activity, CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { ProcessedAnimal } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 
@@ -33,12 +33,12 @@ function AnomalyCategoryGroup({ category, items, setActiveProfileIde }: { catego
                     >
                         <ScrollArea className="h-[280px]">
                             <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-indigo-100">
-                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-32">IDE</th>
-                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider">Descripción</th>
-                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-48">Ubicación</th>
-                                        <th className="py-3 px-4 text-xs font-bold text-indigo-900 uppercase tracking-wider w-64">Posible Causa</th>
+                                <thead className="sticky top-0 bg-indigo-50/95 backdrop-blur-sm z-10 border-b border-indigo-100 shadow-sm">
+                                    <tr className="text-indigo-900 uppercase tracking-wider text-xs">
+                                        <th className="py-3 px-4 font-bold w-32">IDE</th>
+                                        <th className="py-3 px-4 font-bold">Descripción</th>
+                                        <th className="py-3 px-4 font-bold w-48">Ubicación</th>
+                                        <th className="py-3 px-4 font-bold w-64">Posible Causa</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y text-sm divide-indigo-50">
@@ -65,9 +65,16 @@ function AnomalyCategoryGroup({ category, items, setActiveProfileIde }: { catego
     );
 }
 
+type SortDirection = 'asc' | 'desc' | null;
+type SortConfig = { key: keyof ProcessedAnimal | '', direction: SortDirection };
+
 export default function ExceptionManagement({ onViewChange }: { onViewChange?: (view: string) => void }) {
     const { animals, settings, anomalies, setActiveProfileIde } = useDashboard();
     const [isQaExpanded, setIsQaExpanded] = useState(false);
+
+    // Sort states for Top and Bottom lists
+    const [topSort, setTopSort] = useState<SortConfig>({ key: '', direction: null });
+    const [bottomSort, setBottomSort] = useState<SortConfig>({ key: '', direction: null });
 
     const alerts = useMemo(() => {
         const active = animals.filter(a => a.isActive);
@@ -113,44 +120,61 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
         };
     }, [animals]);
 
-    const renderCowRow = (cow: ProcessedAnimal, index: number, isTop: boolean) => (
-        <div key={cow.ide} className={`flex items-center justify-between p-3 rounded-lg border mb-2 ${isTop ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'}`}>
-            <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isTop ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                    #{index + 1}
-                </div>
-                <div>
-                    <p
-                        className="font-bold text-indigo-600 cursor-pointer hover:underline"
-                        onClick={() => {
-                            setActiveProfileIde(cow.ide);
-                            if (onViewChange) onViewChange('profile');
-                        }}
-                    >
-                        {cow.ide}
-                    </p>
-                    <p className="text-xs text-slate-500">{cow.reproductiveState || 'Sin Tacto'}</p>
-                </div>
-            </div>
+    // Sorting Helper
+    const performSort = (list: ProcessedAnimal[], config: SortConfig) => {
+        if (!config.key || config.direction === null) return list;
+        return [...list].sort((a, b) => {
+            let aVal: any = a[config.key as keyof ProcessedAnimal];
+            let bVal: any = b[config.key as keyof ProcessedAnimal];
+            if (aVal === null) aVal = -Infinity;
+            if (bVal === null) bVal = -Infinity;
+            if (aVal < bVal) return config.direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return config.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
 
-            <div className="flex space-x-4 text-right">
-                <div>
-                    <p className="text-xs text-slate-500">GDM</p>
-                    <p className={`font-semibold text-sm ${isTop ? 'text-emerald-600' : 'text-rose-600'}`}>{cow.currentGdm?.toFixed(3)}</p>
-                </div>
-                {cow.pde !== null && (
-                    <div>
-                        <p className="text-xs text-slate-500">PDE</p>
-                        <p className={`font-semibold text-sm ${isTop ? 'text-emerald-600' : 'text-rose-600'}`}>{cow.pde.toFixed(3)}</p>
-                    </div>
-                )}
-                <div className="w-16">
-                    <p className="text-xs text-slate-500">Score</p>
-                    <p className="font-black text-sm text-slate-700">{cow.scoreTotal}</p>
-                </div>
-            </div>
-        </div>
-    );
+    const sortedTop20 = React.useMemo(() => performSort(alerts.top20, topSort), [alerts.top20, topSort]);
+    const sortedBottom20 = React.useMemo(() => performSort(alerts.bottom20, bottomSort), [alerts.bottom20, bottomSort]);
+
+    const handleSort = (config: SortConfig, setConfig: React.Dispatch<React.SetStateAction<SortConfig>>, key: keyof ProcessedAnimal) => {
+        let direction: SortDirection = 'asc';
+        if (config.key === key && config.direction === 'asc') direction = 'desc';
+        else if (config.key === key && config.direction === 'desc') direction = null;
+        setConfig({ key, direction });
+    };
+
+    const getSortIcon = (config: SortConfig, columnKey: keyof ProcessedAnimal) => {
+        if (config.key !== columnKey) return <Minus className="w-3 h-3 text-slate-300 ml-1 inline" />;
+        if (config.direction === 'asc') return <ArrowUp className="w-3 h-3 text-emerald-500 ml-1 inline" />;
+        if (config.direction === 'desc') return <ArrowDown className="w-3 h-3 text-rose-500 ml-1 inline" />;
+        return <Minus className="w-3 h-3 text-slate-300 ml-1 inline" />;
+    };
+
+    const renderCowTableRows = (list: ProcessedAnimal[], isTop: boolean) => {
+        if (list.length === 0) return (
+            <tr><td colSpan={5} className="text-slate-500 text-center py-8">No hay suficientes datos procesados.</td></tr>
+        );
+        return list.map((cow, index) => (
+            <tr key={cow.ide} className={`hover:bg-slate-50 border-b border-slate-100 ${isTop ? 'hover:bg-emerald-50/30' : 'hover:bg-rose-50/30'} transition-colors`}>
+                <td className="py-3 px-4 font-mono font-bold text-indigo-600 cursor-pointer hover:underline" onClick={() => { setActiveProfileIde(cow.ide); if (onViewChange) onViewChange('profile'); }}>
+                    {cow.ide}
+                </td>
+                <td className="py-3 px-4 text-slate-600 font-medium">
+                    {cow.reproductiveState || 'Sin Tacto'}
+                </td>
+                <td className="py-3 px-4 text-right">
+                    <span className={`font-semibold ${isTop ? 'text-emerald-600' : 'text-rose-600'}`}>{cow.currentGdm?.toFixed(3)}</span>
+                </td>
+                <td className="py-3 px-4 text-right">
+                    <span className={`font-semibold ${isTop ? 'text-emerald-600' : 'text-rose-600'}`}>{cow.pde !== null ? cow.pde.toFixed(3) : '-'}</span>
+                </td>
+                <td className="py-3 px-4 text-right font-black text-slate-700">
+                    {cow.scoreTotal}
+                </td>
+            </tr>
+        ));
+    };
 
     // Group anomalies by category
     const groupedAnomalies = useMemo(() => {
@@ -212,12 +236,21 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
                         <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md">Matrices Élite</span>
                     </div>
 
-                    <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        {alerts.top20.length > 0 ? (
-                            alerts.top20.map((cow, idx) => renderCowRow(cow, idx, true))
-                        ) : (
-                            <p className="text-slate-500 text-center py-8">No hay suficientes datos procesados.</p>
-                        )}
+                    <div className="max-h-[500px] overflow-y-auto relative outline-none custom-scrollbar rounded-xl border border-slate-200 shadow-inner bg-white/50">
+                        <table className="w-full text-left border-collapse text-sm">
+                            <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-200 shadow-sm">
+                                <tr className="text-slate-500 text-xs uppercase tracking-wider">
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(topSort, setTopSort, 'ide')}>IDE {getSortIcon(topSort, 'ide')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(topSort, setTopSort, 'reproductiveState')}>Repro {getSortIcon(topSort, 'reproductiveState')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(topSort, setTopSort, 'currentGdm')}>GDM {getSortIcon(topSort, 'currentGdm')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(topSort, setTopSort, 'pde')}>PDE {getSortIcon(topSort, 'pde')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(topSort, setTopSort, 'scoreTotal')}>Score {getSortIcon(topSort, 'scoreTotal')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {renderCowTableRows(sortedTop20, true)}
+                            </tbody>
+                        </table>
                     </div>
                 </motion.div>
 
@@ -231,12 +264,21 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
                         <span className="text-xs font-semibold bg-rose-100 text-rose-700 px-2 py-1 rounded-md">Pasajeros Costosos</span>
                     </div>
 
-                    <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        {alerts.bottom20.length > 0 ? (
-                            alerts.bottom20.map((cow, idx) => renderCowRow(cow, idx, false))
-                        ) : (
-                            <p className="text-slate-500 text-center py-8">No hay suficientes datos procesados.</p>
-                        )}
+                    <div className="max-h-[500px] overflow-y-auto relative outline-none custom-scrollbar rounded-xl border border-slate-200 shadow-inner bg-white/50">
+                        <table className="w-full text-left border-collapse text-sm">
+                            <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-200 shadow-sm">
+                                <tr className="text-slate-500 text-xs uppercase tracking-wider">
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(bottomSort, setBottomSort, 'ide')}>IDE {getSortIcon(bottomSort, 'ide')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(bottomSort, setBottomSort, 'reproductiveState')}>Repro {getSortIcon(bottomSort, 'reproductiveState')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(bottomSort, setBottomSort, 'currentGdm')}>GDM {getSortIcon(bottomSort, 'currentGdm')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(bottomSort, setBottomSort, 'pde')}>PDE {getSortIcon(bottomSort, 'pde')}</th>
+                                    <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(bottomSort, setBottomSort, 'scoreTotal')}>Score {getSortIcon(bottomSort, 'scoreTotal')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {renderCowTableRows(sortedBottom20, false)}
+                            </tbody>
+                        </table>
                     </div>
                 </motion.div>
 
