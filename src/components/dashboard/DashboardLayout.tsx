@@ -102,7 +102,7 @@ export default function DashboardLayout() {
                             </>
                         )}
                         {currentView === 'toros' && (
-                            <TorosView />
+                            <TorosView onViewChange={setCurrentView} />
                         )}
                         {currentView === 'reproduccion' && (
                             <ReproductiveDataView />
