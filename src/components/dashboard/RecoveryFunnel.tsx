@@ -2,13 +2,20 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from './DashboardContext';
 import { calculateEvolution, EvolutionMetrics } from '@/lib/analytics-engine';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, XCircle, HeartPulse } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, XCircle, HeartPulse, MinusCircle, FileText } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { EvolutionTransition } from '@/lib/analytics-engine';
 
 type TimeFilter = 'T1_T2' | 'T2_FINAL' | 'T1_FINAL';
 
 export default function RecoveryFunnel() {
     const { animals } = useDashboard();
     const [filter, setFilter] = useState<TimeFilter>('T1_T2');
+
+    // UI State for Details Sheet
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [activeDetailType, setActiveDetailType] = useState<'RECOVERED' | 'LOST' | 'MAINTAINED_GOOD' | 'MAINTAINED_BAD' | null>(null);
 
     const stats = useMemo<EvolutionMetrics>(() => {
         switch (filter) {
@@ -65,6 +72,24 @@ export default function RecoveryFunnel() {
         }
 
     }, [animals, filter]);
+
+    // Helpers for Sheet UI
+    const handleOpenDetails = (type: 'RECOVERED' | 'LOST' | 'MAINTAINED_GOOD' | 'MAINTAINED_BAD') => {
+        setActiveDetailType(type);
+        setIsSheetOpen(true);
+    };
+
+    const getSheetData = () => {
+        if (!activeDetailType || !stats?.details) return { title: '', desc: '', list: [] as EvolutionTransition[] };
+        switch (activeDetailType) {
+            case 'RECOVERED': return { title: 'Vaquillonas Recuperadas', desc: 'Pasaron de Anestro a un estado saludable (Ciclando/Preñada).', list: stats.details.recovered };
+            case 'LOST': return { title: 'Vaquillonas Caídas', desc: 'Cayeron de un estado saludable a Anestro/Vacía.', list: stats.details.lost };
+            case 'MAINTAINED_GOOD': return { title: 'Mantuvieron Sanidad', desc: 'Permanecieron Ciclantes o resultaron Preñadas.', list: stats.details.maintainedGood };
+            case 'MAINTAINED_BAD': return { title: 'Permanecieron en Anestro', desc: 'No respondieron al tratamiento.', list: stats.details.maintainedBad };
+        }
+    };
+
+    const sheetData = getSheetData();
 
     return (
         <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-3xl p-8 shadow-sm col-span-1 md:col-span-2 flex flex-col gap-6">
@@ -146,18 +171,23 @@ export default function RecoveryFunnel() {
                             </div>
                         </div>
 
-                        {/* Bad Maintained Tooltip Hook */}
-                        <div className="absolute -bottom-8 left-[-10%] md:-left-8 top-auto md:top-1/2 md:-translate-y-1/2 z-10 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
-                            <div className="bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl w-48 text-center relative">
-                                <XCircle className="w-4 h-4 text-rose-400 mx-auto mb-1" />
-                                <strong>{stats.maintainedBad} vacas</strong> permanecieron en Anestro/Vacías sin responder al tratamiento.
-                            </div>
-                        </div>
+                        {/* Interactive Maintained Bad Button */}
+                        <button
+                            onClick={() => handleOpenDetails('MAINTAINED_BAD')}
+                            className="mt-6 flex items-center gap-2 text-slate-500 bg-slate-200/50 px-4 py-1.5 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-700 transition-colors cursor-pointer"
+                        >
+                            <MinusCircle className="w-4 h-4" />
+                            <span className="font-semibold text-sm">{stats.maintainedBad} Mantuvieron</span>
+                        </button>
+
                     </div>
 
                     {/* TRANSITIONS (Arrows) */}
                     <div className="flex flex-row md:flex-col items-center justify-center gap-4">
-                        <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors group relative">
+                        <button
+                            onClick={() => handleOpenDetails('RECOVERED')}
+                            className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 cursor-pointer hover:bg-emerald-100 hover:scale-105 transition-all group relative"
+                        >
                             <span className="font-bold">{stats.recoveredCount} Recuperadas</span>
                             <ArrowRight className="w-5 h-5 hidden md:block" />
 
@@ -166,18 +196,20 @@ export default function RecoveryFunnel() {
                                     <strong>{stats.recoveredCount} vaquillonas</strong> pasaron de Anestro a Ciclando/Preñada ({stats.recoveryRate.toFixed(1)}% de efectividad de tratamiento).
                                 </div>
                             </div>
-                        </div>
+                        </button>
 
-                        <div className="flex items-center gap-2 text-rose-600 bg-rose-50 px-4 py-2 rounded-full border border-rose-100 cursor-pointer hover:bg-rose-100 transition-colors group relative">
+                        <button
+                            onClick={() => handleOpenDetails('LOST')}
+                            className="flex items-center gap-2 text-rose-600 bg-rose-50 px-4 py-2 rounded-full border border-rose-100 cursor-pointer hover:bg-rose-100 hover:scale-105 transition-all group relative"
+                        >
                             <ArrowLeft className="w-5 h-5 hidden md:block" />
                             <span className="font-bold">{stats.lostCount} Caídas</span>
-                        </div>
+                        </button>
                     </div>
 
                     {/* RIGHT BUBBLE (Initial Sanity) */}
                     <div className="flex-1 w-full bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center relative group">
                         <span className="text-slate-500 font-medium mb-1">Ciclantes / Preñadas</span>
-                        <span className="text-3xl font-black text-slate-800">{stats.maintainedGood + stats.lostCount}</span>
 
                         {/* Initial Granularity Added */}
                         <div className="flex gap-4 text-xs text-slate-500 mt-2">
@@ -191,18 +223,70 @@ export default function RecoveryFunnel() {
                             </div>
                         </div>
 
-                        {/* Lost Flow Tooltip Hook */}
-                        <div className="absolute -bottom-8 right-[-10%] md:-right-8 top-auto md:top-1/2 md:-translate-y-1/2 z-10 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
-                            <div className="bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl w-48 text-center relative">
-                                <AlertTriangle className="w-4 h-4 text-amber-400 mx-auto mb-1" />
-                                <strong>{stats.lostCount} vacas</strong> cayeron de un estado saludable a Anestro/Vacia.
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-8 border-transparent border-b-slate-800"></div>
-                            </div>
-                        </div>
+                        {/* Interactive Maintained Good Button */}
+                        <button
+                            onClick={() => handleOpenDetails('MAINTAINED_GOOD')}
+                            className="mt-6 flex items-center gap-2 text-slate-500 bg-slate-200/50 px-4 py-1.5 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-700 transition-colors cursor-pointer"
+                        >
+                            <MinusCircle className="w-4 h-4" />
+                            <span className="font-semibold text-sm">{stats.maintainedGood} Mantuvieron</span>
+                        </button>
+
                     </div>
 
                 </div>
             )}
+
+            {/* Slide-over UI (Sheet) for displaying exact IDEs */}
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col bg-slate-50">
+                    <SheetHeader className="pb-4 border-b border-slate-200">
+                        <SheetTitle className="flex items-center gap-2 text-2xl">
+                            <FileText className="w-6 h-6 text-indigo-500" />
+                            {sheetData.title}
+                        </SheetTitle>
+                        <SheetDescription>
+                            {sheetData.desc} Total: <strong>{sheetData.list.length}</strong> vaquillonas.
+                        </SheetDescription>
+                    </SheetHeader>
+
+                    <ScrollArea className="flex-1 -mx-6 px-6 py-4">
+                        {sheetData.list.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                                <HeartPulse className="w-12 h-12 mb-4 text-slate-200" />
+                                <p>No hay vaquillonas en esta categoría para el rango seleccionado.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {sheetData.list.map((item, idx) => (
+                                    <div key={item.ide + idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group">
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-mono text-sm font-semibold text-slate-800">{item.ide}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 text-sm">
+                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-500 text-xs font-medium truncate">
+                                                {item.startState}
+                                            </div>
+                                            <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                                            <div className="flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 flex items-center justify-center text-slate-700 text-xs font-semibold truncate">
+                                                {item.endState}
+                                            </div>
+                                        </div>
+
+                                        {/* Colored Accent Bar depending on transition type */}
+                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${activeDetailType === 'RECOVERED' ? 'bg-emerald-500' :
+                                                activeDetailType === 'LOST' ? 'bg-rose-500' :
+                                                    'bg-slate-300'
+                                            }`} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </ScrollArea>
+                </SheetContent>
+            </Sheet>
 
         </div>
     );
