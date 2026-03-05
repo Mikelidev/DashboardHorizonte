@@ -113,10 +113,6 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
                     <h2 className="text-2xl font-bold text-slate-800">Control de Pérdidas y Calidad</h2>
                     <p className="text-slate-500 mt-1">Gestión de excepciones mediante Z-Scores y detección polarizada del rodeo.</p>
                 </div>
-                <button className="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-semibold hover:bg-slate-700 transition flex items-center gap-2">
-                    <ArrowDown className="w-4 h-4" />
-                    Exportar Lista de Descarte
-                </button>
             </div>
 
             {/* Alert Summary Cards */}

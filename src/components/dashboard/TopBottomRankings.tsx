@@ -128,7 +128,13 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
                         <ArrowDown className="w-5 h-5 text-rose-500" />
                         Bottom 20 (Peores)
                     </h3>
-                    <span className="text-xs font-semibold bg-rose-100 text-rose-700 px-2 py-1 rounded-md">Pasajeros Costosos</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                            <ArrowDown className="w-3.5 h-3.5" />
+                            Exportar Lista de Descarte
+                        </button>
+                        <span className="text-xs font-semibold bg-rose-100 text-rose-700 px-2 py-1 rounded-md">Pasajeros Costosos</span>
+                    </div>
                 </div>
 
                 <div className="max-h-[500px] overflow-y-auto relative outline-none custom-scrollbar rounded-xl border border-slate-200 shadow-inner bg-white/50">
