@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useDashboard } from './DashboardContext';
 import { calculateEvolution, EvolutionMetrics } from '@/lib/analytics-engine';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, CheckCircle2, AlertTriangle, XCircle, HeartPulse } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, XCircle, HeartPulse } from 'lucide-react';
 
 type TimeFilter = 'T1_T2' | 'T2_FINAL' | 'T1_FINAL';
 
@@ -71,17 +71,32 @@ export default function RecoveryFunnel() {
             ) : (
                 <div className="relative pt-4 pb-8 px-4 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 overflow-hidden">
 
-                    {/* LEFT BUBBLE (Initial Sanity) */}
+                    {/* LEFT BUBBLE (Initial Anestro) */}
                     <div className="flex-1 w-full bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center relative group">
-                        <span className="text-slate-500 font-medium mb-1">Ciclantes / Preñadas</span>
-                        <span className="text-3xl font-black text-slate-800">{stats.maintainedGood + stats.lostCount}</span>
+                        <span className="text-slate-500 font-medium mb-1">En Anestro</span>
+                        <span className="text-3xl font-black text-slate-800">{stats.maintainedBad + stats.recoveredCount}</span>
 
-                        {/* Lost Flow Tooltip Hook */}
-                        <div className="absolute -bottom-8 right-[-10%] md:-right-8 top-auto md:top-1/2 md:-translate-y-1/2 z-10 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
+                        {/* Initial Granularity Added */}
+                        <div className="flex gap-4 text-xs text-slate-500 mt-2">
+                            <div className="flex flex-col items-center">
+                                <span className="font-semibold text-slate-700">{stats.initialDetails.as}</span>
+                                <span>AS</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="font-semibold text-slate-700">{stats.initialDetails.ap}</span>
+                                <span>AP</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="font-semibold text-slate-700">{stats.initialDetails.noApta}</span>
+                                <span>No Apta</span>
+                            </div>
+                        </div>
+
+                        {/* Bad Maintained Tooltip Hook */}
+                        <div className="absolute -bottom-8 left-[-10%] md:-left-8 top-auto md:top-1/2 md:-translate-y-1/2 z-10 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
                             <div className="bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl w-48 text-center relative">
-                                <AlertTriangle className="w-4 h-4 text-amber-400 mx-auto mb-1" />
-                                <strong>{stats.lostCount} vacas</strong> cayeron de un estado saludable a Anestro/Vacia.
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-8 border-transparent border-b-slate-800"></div>
+                                <XCircle className="w-4 h-4 text-rose-400 mx-auto mb-1" />
+                                <strong>{stats.maintainedBad} vacas</strong> permanecieron en Anestro/Vacías sin responder al tratamiento.
                             </div>
                         </div>
                     </div>
@@ -89,9 +104,8 @@ export default function RecoveryFunnel() {
                     {/* TRANSITIONS (Arrows) */}
                     <div className="flex flex-row md:flex-col items-center justify-center gap-4">
                         <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors group relative">
-                            <ArrowRight className="w-5 h-5 hidden md:block" />
                             <span className="font-bold">{stats.recoveredCount} Recuperadas</span>
-                            <CheckCircle2 className="w-5 h-5" />
+                            <ArrowRight className="w-5 h-5 hidden md:block" />
 
                             <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 hidden group-hover:block w-56">
                                 <div className="bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl text-center">
@@ -101,22 +115,34 @@ export default function RecoveryFunnel() {
                         </div>
 
                         <div className="flex items-center gap-2 text-rose-600 bg-rose-50 px-4 py-2 rounded-full border border-rose-100 cursor-pointer hover:bg-rose-100 transition-colors group relative">
-                            <ArrowRight className="w-5 h-5 hidden md:block" />
+                            <ArrowLeft className="w-5 h-5 hidden md:block" />
                             <span className="font-bold">{stats.lostCount} Caídas</span>
-                            <XCircle className="w-5 h-5" />
                         </div>
                     </div>
 
-                    {/* RIGHT BUBBLE (Initial Anestro) */}
+                    {/* RIGHT BUBBLE (Initial Sanity) */}
                     <div className="flex-1 w-full bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center relative group">
-                        <span className="text-slate-500 font-medium mb-1">En Anestro</span>
-                        <span className="text-3xl font-black text-slate-800">{stats.maintainedBad + stats.recoveredCount}</span>
+                        <span className="text-slate-500 font-medium mb-1">Ciclantes / Preñadas</span>
+                        <span className="text-3xl font-black text-slate-800">{stats.maintainedGood + stats.lostCount}</span>
 
-                        {/* Bad Maintained Tooltip Hook */}
-                        <div className="absolute -bottom-8 left-[-10%] md:-left-8 top-auto md:top-1/2 md:-translate-y-1/2 z-10 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
+                        {/* Initial Granularity Added */}
+                        <div className="flex gap-4 text-xs text-slate-500 mt-2">
+                            <div className="flex flex-col items-center">
+                                <span className="font-semibold text-slate-700">{stats.initialDetails.ciclando}</span>
+                                <span>Ciclando</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="font-semibold text-slate-700">{stats.initialDetails.prenadas}</span>
+                                <span>Preñadas</span>
+                            </div>
+                        </div>
+
+                        {/* Lost Flow Tooltip Hook */}
+                        <div className="absolute -bottom-8 right-[-10%] md:-right-8 top-auto md:top-1/2 md:-translate-y-1/2 z-10 hidden group-hover:block transition-all animate-in fade-in slide-in-from-bottom-2">
                             <div className="bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl w-48 text-center relative">
-                                <XCircle className="w-4 h-4 text-rose-400 mx-auto mb-1" />
-                                <strong>{stats.maintainedBad} vacas</strong> permanecieron en Anestro/Vacías sin responder al tratamiento.
+                                <AlertTriangle className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+                                <strong>{stats.lostCount} vacas</strong> cayeron de un estado saludable a Anestro/Vacia.
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-8 border-transparent border-b-slate-800"></div>
                             </div>
                         </div>
                     </div>

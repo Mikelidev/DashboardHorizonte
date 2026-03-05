@@ -101,6 +101,13 @@ export interface EvolutionMetrics {
     maintainedGood: number; // Stayed Good
     maintainedBad: number;  // Stayed Bad (Anestro)
     recoveryRate: number;   // (recoveredCount / initialBadCount) * 100
+    initialDetails: {
+        as: number;
+        ap: number;
+        noApta: number;
+        ciclando: number;
+        prenadas: number; // Includes P IATF, NATURAL, etc
+    };
 }
 
 export interface EvolutionPhase {
@@ -111,62 +118,46 @@ export interface EvolutionPhase {
 /**
  * Tracks transition between two specific tacto events.
  */
-function getEventState(animal: ProcessedAnimal, phase: EvolutionPhase): 'GOOD' | 'BAD' | null {
+function getEventState(animal: ProcessedAnimal, phase: EvolutionPhase): { bucket: 'GOOD' | 'BAD' | null, rawState: string } {
     const ev = animal.eventos.find(e => {
         if (!e.type.toUpperCase().includes(phase.keyword)) return false;
         if (phase.eventNumber !== undefined && e.eventNumber !== phase.eventNumber) return false;
         return true;
     });
 
-    if (!ev) return null;
+    if (!ev) return { bucket: null, rawState: '' };
 
-    // If no explicit state is provided at Tacto IATF, and they were supposed to be evaluated, it often implies 'Vacia' or unmodified BAD state.
-    // But let's check explicit strings first.
     const state = (ev.reproductiveState || '').toUpperCase().trim();
-    if (state === 'AS' || state === 'AP' || state === 'NO APTA') return 'BAD';
+    if (state === 'AS' || state === 'AP' || state === 'NO APTA') return { bucket: 'BAD', rawState: state };
 
-    // Any kind of service means GOOD (Pregnant)
-    if (ev.serviceType && ev.serviceType.trim() !== '') return 'GOOD';
+    if (ev.serviceType && ev.serviceType.trim() !== '') return { bucket: 'GOOD', rawState: 'PREÑADA' };
+    if (state.includes('CICLANDO')) return { bucket: 'GOOD', rawState: 'CICLANDO' };
+    if (state.includes('PRENADA') || state.includes('PREÑADA') || state.includes('P IATF')) return { bucket: 'GOOD', rawState: 'PREÑADA' };
 
-    // Ciclando means GOOD (Apta)
-    if (state.includes('CICLANDO')) return 'GOOD';
+    if (phase.keyword.includes('IATF') && state === '') return { bucket: 'BAD', rawState: 'VACIA' };
 
-    if (state.includes('PRENADA') || state.includes('PREÑADA') || state.includes('P IATF')) return 'GOOD';
-
-    // Implicit: if it's the IATF event and it's empty, they didn't get pregnant.
-    if (phase.keyword.includes('IATF') && state === '') return 'BAD';
-
-    return null;
+    return { bucket: null, rawState: state };
 }
 
 /**
  * Gets final Service/Diagnosis result. According to user specs, "FINAL" success is determined
  * by whether they successfully registered a "Tipo de Servicio" (Natural, Artificial, Embryo).
  */
-function getFinalState(animal: ProcessedAnimal): 'GOOD' | 'BAD' | null {
-    // Find the Tacto IATF or latest diagnostic event
+function getFinalState(animal: ProcessedAnimal): { bucket: 'GOOD' | 'BAD' | null, rawState: string } {
     const ev = animal.eventos.find(e => e.type.toUpperCase().includes('IATF') || e.type.toUpperCase().includes('SERVICIO'));
 
     if (ev) {
-        // If "Tipo de Servicio" has ANY value, she is pregnant ('GOOD').
-        if (ev.serviceType && ev.serviceType.trim() !== '') {
-            return 'GOOD';
-        }
-        // If it's the IATF event and Tipo de Servicio is blank, she is empty ('BAD').
-        if (ev.type.toUpperCase().includes('IATF')) {
-            return 'BAD';
-        }
+        if (ev.serviceType && ev.serviceType.trim() !== '') return { bucket: 'GOOD', rawState: 'PREÑADA' };
+        if (ev.type.toUpperCase().includes('IATF')) return { bucket: 'BAD', rawState: 'VACIA' };
     }
 
-    // Fallback to strict string check if no explicit service event found but we know the ultimate state
     if (animal.reproductiveState) {
         const s = animal.reproductiveState.toUpperCase().trim();
-        // Notice 'CICLANDO' is removed from here. Final state success REQUIRES pregnancy/service.
-        if (s.includes('PRENADA') || s.includes('PREÑADA') || s.includes('P IATF')) return 'GOOD';
-        if (s === 'AS' || s === 'AP' || s === 'NO APTA' || s.includes('VACIA')) return 'BAD';
+        if (s.includes('PRENADA') || s.includes('PREÑADA') || s.includes('P IATF')) return { bucket: 'GOOD', rawState: 'PREÑADA' };
+        if (s === 'AS' || s === 'AP' || s === 'NO APTA' || s.includes('VACIA')) return { bucket: 'BAD', rawState: s };
     }
 
-    return null;
+    return { bucket: null, rawState: '' };
 }
 
 export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: EvolutionPhase, toPhase: EvolutionPhase | 'FINAL'): EvolutionMetrics {
@@ -178,17 +169,30 @@ export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: Evolut
         maintainedGood: 0,
         maintainedBad: 0,
         recoveryRate: 0,
+        initialDetails: { as: 0, ap: 0, noApta: 0, ciclando: 0, prenadas: 0 }
     };
 
     for (const an of animals) {
         if (!an.isActive) continue;
 
-        const startState = getEventState(an, fromPhase);
-        const endState = toPhase === 'FINAL' ? getFinalState(an) : getEventState(an, toPhase);
+        const startInfo = getEventState(an, fromPhase);
+        const endInfo = toPhase === 'FINAL' ? getFinalState(an) : getEventState(an, toPhase);
+
+        const startState = startInfo.bucket;
+        const endState = endInfo.bucket;
 
         // Only measure cows that have BOTH data points in their timeline
         if (startState && endState) {
             metrics.totalAnalyzed++;
+
+            // Log Initial Details
+            const rawStart = startInfo.rawState;
+            if (rawStart.includes('SUPERFICIAL') || rawStart === 'AS') metrics.initialDetails.as++;
+            else if (rawStart.includes('PROFUNDO') || rawStart === 'AP') metrics.initialDetails.ap++;
+            else if (rawStart.includes('NO APTA')) metrics.initialDetails.noApta++;
+            else if (rawStart.includes('CICLANDO')) metrics.initialDetails.ciclando++;
+            else if (rawStart.includes('PRENADA') || rawStart.includes('PREÑADA')) metrics.initialDetails.prenadas++;
+
             if (startState === 'BAD') initialBadCount++;
 
             if (startState === 'BAD' && endState === 'GOOD') metrics.recoveredCount++;
