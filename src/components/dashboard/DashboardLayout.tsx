@@ -15,6 +15,7 @@ import AnimalProfile from './AnimalProfile';
 import SireProfile from './SireProfile';
 import ConfigPanel from './ConfigPanel';
 import InventoryTable from './InventoryTable';
+import AlertCards from './AlertCards';
 import { useDashboard } from './DashboardContext';
 import { CloudDownload, AlertCircle } from 'lucide-react';
 
@@ -96,6 +97,7 @@ export default function DashboardLayout() {
                         <HeaderKPIs />
                         {currentView === 'dashboard' && (
                             <>
+                                <AlertCards />
                                 <AlertsRegion />
                                 <HealthDonuts />
                                 <WeightDistributionChart />
@@ -117,7 +119,7 @@ export default function DashboardLayout() {
                             <ExceptionManagement />
                         )}
                         {currentView === 'profile' && (
-                            <AnimalProfile />
+                            <AnimalProfile onViewChange={setCurrentView} />
                         )}
                         {currentView === 'sire-profile' && (
                             <SireProfile onViewChange={setCurrentView} />

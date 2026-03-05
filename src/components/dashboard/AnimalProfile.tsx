@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Activity, Calendar, GitCommit, HeartPulse, Scale, Dna, Info, Target, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceDot } from 'recharts';
 import { ProcessedAnimal, ProcessedEvent } from '@/types';
+import { ScrollArea, ScrollBar } from '../ui/scroll-area';
 
 const CustomDot = (props: any) => {
     const { cx, cy, payload } = props;
@@ -34,8 +35,12 @@ const CustomDot = (props: any) => {
     );
 };
 
-export default function AnimalProfile() {
-    const { animals, settings, activeProfileIde, setActiveProfileIde } = useDashboard();
+interface AnimalProfileProps {
+    onViewChange?: (view: string) => void;
+}
+
+export default function AnimalProfile({ onViewChange }: AnimalProfileProps = {}) {
+    const { animals, settings, activeProfileIde, setActiveProfileIde, setActiveSireId } = useDashboard();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIde, setSelectedIde] = useState<string | null>(activeProfileIde || null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -86,6 +91,19 @@ export default function AnimalProfile() {
 
         return { chartData: mappedChart, chronologicalEvents: chrono };
     }, [activeAnimal]);
+
+    const padresActivos = React.useMemo(() => {
+        const activeAnimals = animals.filter(a => a.isActive);
+        const counts: Record<string, number> = {};
+        activeAnimals.forEach(a => {
+            if (a.padre) {
+                counts[a.padre] = (counts[a.padre] || 0) + 1;
+            }
+        });
+        return Object.entries(counts)
+            .map(([padre, count]) => ({ padre, count }))
+            .sort((a, b) => b.count - a.count);
+    }, [animals]);
 
     return (
         <div className="space-y-6">
@@ -150,6 +168,37 @@ export default function AnimalProfile() {
                         )}
                     </AnimatePresence>
                 </div>
+            </div>
+
+            {/* Padres Activos List */}
+            <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Dna className="w-4 h-4 text-indigo-400" />
+                    Fichas Médicas de Padres Activos
+                </h4>
+                <ScrollArea className="w-full whitespace-nowrap pb-4">
+                    <div className="flex w-max space-x-4">
+                        {padresActivos.map((p) => (
+                            <div
+                                key={p.padre}
+                                onClick={() => {
+                                    setActiveSireId(p.padre);
+                                    if (onViewChange) onViewChange('sire-profile');
+                                }}
+                                className="inline-flex items-center gap-3 bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md cursor-pointer transition-all rounded-xl p-3 px-5 group"
+                            >
+                                <div className="bg-indigo-50 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    <Dna className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <p className="font-extrabold text-slate-800 group-hover:text-indigo-700 transition-colors">{p.padre}</p>
+                                    <p className="text-xs font-semibold text-slate-400">{p.count} crías hijas</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
             </div>
 
             {/* Empty State */}

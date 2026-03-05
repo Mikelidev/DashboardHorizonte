@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ArrowDown, ArrowUp, Minus, Activity, CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { ProcessedAnimal } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
+import AlertCards from './AlertCards';
 
 function AnomalyCategoryGroup({ category, items, setActiveProfileIde }: { category: string, items: any[], setActiveProfileIde: (ide: string) => void }) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -200,28 +201,7 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
             </div>
 
             {/* Alert Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass rounded-2xl p-5 border border-rose-200/60 bg-rose-50/30">
-                    <div className="flex items-center gap-3 mb-2">
-                        <AlertCircle className="w-5 h-5 text-rose-500" />
-                        <h3 className="font-bold text-rose-800">Alertas Críticas (Z-Score)</h3>
-                    </div>
-                    <p className="text-3xl font-black text-rose-600">{alerts.criticalCows.length}</p>
-                    <p className="text-xs text-rose-500 mt-1 font-medium">Animales perdiendo peso atípicamente o anestro profundo terminal.</p>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-5 border border-amber-200/60 bg-amber-50/30">
-                    <div className="flex items-center gap-3 mb-2">
-                        <Activity className="w-5 h-5 text-amber-500" />
-                        <h3 className="font-bold text-amber-800">Rodeo Retrasado</h3>
-                    </div>
-                    <p className="text-3xl font-black text-amber-600">{alerts.delayedCows.length}</p>
-                    <p className="text-xs text-amber-600 mt-1 font-medium">Proyectan no llegar al objetivo IATF sin intervención forrajera.</p>
-                </motion.div>
-
-                {/* Visual Filler for alignment */}
-                <div className="hidden lg:block lg:col-span-2"></div>
-            </div>
+            <AlertCards />
 
             {/* Rankings Top/Bottom Lists */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
