@@ -113,7 +113,7 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
                                 sortedAnimals.map(animal => (
                                     <TableRow key={animal.ide} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-white">
                                         <TableCell
-                                            className="font-bold text-indigo-600 cursor-pointer hover:underline"
+                                            className="font-bold text-indigo-600 cursor-pointer hover:underline px-4"
                                             onClick={() => {
                                                 setActiveProfileIde(animal.ide);
                                                 if (onViewChange) onViewChange('profile');

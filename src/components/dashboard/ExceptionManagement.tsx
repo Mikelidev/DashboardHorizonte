@@ -5,7 +5,7 @@ import { AlertCircle, ArrowDown, ArrowUp, Activity, CheckCircle2, XCircle, Chevr
 import { ProcessedAnimal } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 
-function AnomalyCategoryGroup({ category, items }: { category: string, items: any[] }) {
+function AnomalyCategoryGroup({ category, items, setActiveProfileIde }: { category: string, items: any[], setActiveProfileIde: (ide: string) => void }) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     return (
@@ -44,7 +44,12 @@ function AnomalyCategoryGroup({ category, items }: { category: string, items: an
                                 <tbody className="divide-y text-sm divide-indigo-50">
                                     {items.map((ano, i) => (
                                         <tr key={`${ano.ide}-${i}`} className="hover:bg-indigo-50/50 transition-colors">
-                                            <td className="py-3 px-4 font-mono font-bold text-indigo-900 whitespace-nowrap">{ano.ide}</td>
+                                            <td
+                                                className="py-3 px-4 font-mono font-bold text-indigo-600 whitespace-nowrap cursor-pointer hover:underline"
+                                                onClick={() => setActiveProfileIde(ano.ide)}
+                                            >
+                                                {ano.ide}
+                                            </td>
                                             <td className="py-3 px-4 text-slate-800 break-words">{ano.desc}</td>
                                             <td className="py-3 px-4 text-slate-600 whitespace-nowrap"><span className="bg-white/60 px-2 py-1 rounded text-xs font-mono">{ano.location}</span></td>
                                             <td className="py-3 px-4 text-slate-600 italic break-words">{ano.cause}</td>
@@ -60,8 +65,8 @@ function AnomalyCategoryGroup({ category, items }: { category: string, items: an
     );
 }
 
-export default function ExceptionManagement() {
-    const { animals, settings, anomalies } = useDashboard();
+export default function ExceptionManagement({ onViewChange }: { onViewChange?: (view: string) => void }) {
+    const { animals, settings, anomalies, setActiveProfileIde } = useDashboard();
     const [isQaExpanded, setIsQaExpanded] = useState(false);
 
     const alerts = useMemo(() => {
@@ -115,7 +120,15 @@ export default function ExceptionManagement() {
                     #{index + 1}
                 </div>
                 <div>
-                    <p className="font-bold text-slate-800">{cow.ide}</p>
+                    <p
+                        className="font-bold text-indigo-600 cursor-pointer hover:underline"
+                        onClick={() => {
+                            setActiveProfileIde(cow.ide);
+                            if (onViewChange) onViewChange('profile');
+                        }}
+                    >
+                        {cow.ide}
+                    </p>
                     <p className="text-xs text-slate-500">{cow.reproductiveState || 'Sin Tacto'}</p>
                 </div>
             </div>
@@ -266,7 +279,7 @@ export default function ExceptionManagement() {
                                 className="space-y-6 overflow-hidden"
                             >
                                 {Object.entries(groupedAnomalies).map(([category, items]) => (
-                                    <AnomalyCategoryGroup key={category} category={category} items={items} />
+                                    <AnomalyCategoryGroup key={category} category={category} items={items} setActiveProfileIde={setActiveProfileIde} />
                                 ))}
                             </motion.div>
                         )}
