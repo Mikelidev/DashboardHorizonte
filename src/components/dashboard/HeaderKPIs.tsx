@@ -5,8 +5,14 @@ import { useDashboard } from './DashboardContext';
 import { Card, CardContent } from '../ui/card';
 import { TrendingUp, Scale, Users, Activity, CalendarClock } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
+import AlertsRegion from './AlertsRegion';
 
-export default function HeaderKPIs() {
+interface HeaderKPIsProps {
+    currentView?: string;
+    onViewChange?: (view: string) => void;
+}
+
+export default function HeaderKPIs({ currentView, onViewChange }: HeaderKPIsProps) {
     const { animals, availableSnapshots, selectedSnapshot, setSelectedSnapshot } = useDashboard();
 
     const activeAnimals = useMemo(() => animals.filter(a => a.isActive), [animals]);
@@ -51,36 +57,43 @@ export default function HeaderKPIs() {
 
     return (
         <div className="flex flex-col gap-6">
-            {/* Date Filter */}
-            <div className="flex justify-end mb-2">
-                <div className="flex items-center gap-3 w-full md:w-auto bg-white/60 p-3 rounded-2xl border border-slate-200/60 backdrop-blur-md shadow-sm">
-                    <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600 hidden md:flex">
-                        <CalendarClock className="w-5 h-5" />
+            {/* Top Row: Alerts Region & Date Filter */}
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-start gap-4 mb-2">
+                <div className="w-full xl:flex-1">
+                    {currentView === 'dashboard' && <AlertsRegion onViewChange={onViewChange} />}
+                </div>
+                {/* Date Filter */}
+                <div className="flex justify-end shrink-0 w-full xl:w-auto">
+                    <div className="flex items-center gap-3 w-full md:w-auto bg-white/60 p-3 rounded-2xl border border-slate-200/60 backdrop-blur-md shadow-sm">
+                        <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600 hidden md:flex">
+                            <CalendarClock className="w-5 h-5" />
+                        </div>
+                        <label htmlFor="snapshot-select" className="text-sm font-semibold text-slate-600 hidden md:block whitespace-nowrap">
+                            Historial de Pesadas:
+                        </label>
+                        <select
+                            id="snapshot-select"
+                            value={selectedSnapshot}
+                            onChange={(e) => setSelectedSnapshot(e.target.value)}
+                            className="bg-white border-2 border-indigo-100 text-slate-800 text-sm font-bold rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 block w-full md:w-auto md:min-w-[250px] p-2.5 shadow-sm transition-all outline-none cursor-pointer hover:border-indigo-300"
+                        >
+                            {availableSnapshots.map(snap => (
+                                <option key={snap.id} value={snap.id} className="font-medium">
+                                    {snap.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                    <label htmlFor="snapshot-select" className="text-sm font-semibold text-slate-600 hidden md:block whitespace-nowrap">
-                        Historial de Pesadas:
-                    </label>
-                    <select
-                        id="snapshot-select"
-                        value={selectedSnapshot}
-                        onChange={(e) => setSelectedSnapshot(e.target.value)}
-                        className="bg-white border-2 border-indigo-100 text-slate-800 text-sm font-bold rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 block w-full md:w-auto md:min-w-[250px] p-2.5 shadow-sm transition-all outline-none cursor-pointer hover:border-indigo-300"
-                    >
-                        {availableSnapshots.map(snap => (
-                            <option key={snap.id} value={snap.id} className="font-medium">
-                                {snap.label}
-                            </option>
-                        ))}
-                    </select>
                 </div>
             </div>
 
-            <motion.div
-                className="grid grid-cols-1 md:grid-cols-4 gap-6"
-                variants={containerVariants}
-                initial="hidden"
-                animate="show"
-            >
+            {(!currentView || currentView === 'dashboard' || currentView === 'productividad') && (
+                <motion.div
+                    className="grid grid-cols-1 md:grid-cols-4 gap-6"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                >
                 {/* KPI 1 */}
                 <motion.div variants={itemVariants}>
                     <Card className="glass border-transparent overflow-hidden relative group">
@@ -145,6 +158,7 @@ export default function HeaderKPIs() {
                     </Card>
                 </motion.div>
             </motion.div>
+            )}
         </div>
     );
 }

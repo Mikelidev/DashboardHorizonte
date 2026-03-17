@@ -18,6 +18,8 @@ interface DashboardContextProps {
     setActiveProfileIde: (ide: string | null) => void;
     activeSireId: string | null;
     setActiveSireId: (id: string | null) => void;
+    inventoryOverrides: Record<string, 'active' | 'archived'>;
+    setInventoryOverride: (ide: string, status: 'active' | 'archived') => void;
 }
 
 const defaultSettings: ThresholdSettings = {
@@ -36,41 +38,83 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     const [availableSnapshots, setAvailableSnapshots] = useState<SnapshotDate[]>([]);
     const [selectedSnapshot, setSelectedSnapshot] = useState<string>('actualidad');
     const [anomalies, setAnomalies] = useState<import('@/types').DataAnomaly[]>([]);
-    const [rawAnimales, setRawAnimales] = useState<string>('');
-    const [rawEventos, setRawEventos] = useState<string>('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [activeProfileIde, setActiveProfileIde] = useState<string | null>(null);
     const [activeSireId, setActiveSireId] = useState<string | null>(null);
+    const [inventoryOverrides, setInventoryOverridesState] = useState<Record<string, 'active' | 'archived'>>({});
+
+    const [rawAnimales, setRawAnimales] = useState<string | null>(null);
+    const [rawEventos, setRawEventos] = useState<string | null>(null);
+
+    // Initial load of persistence
+    useEffect(() => {
+        const savedOverrides = localStorage.getItem('inventoryOverrides');
+        if (savedOverrides) {
+            try {
+                setInventoryOverridesState(JSON.parse(savedOverrides));
+            } catch (e) {
+                console.error("Error parsing inventoryOverrides", e);
+            }
+        }
+    }, []);
+
+    const setInventoryOverride = (ide: string, status: 'active' | 'archived') => {
+        setInventoryOverridesState(prev => {
+            const next = { ...prev, [ide]: status };
+            localStorage.setItem('inventoryOverrides', JSON.stringify(next));
+            return next;
+        });
+    };
 
     const loadDataFiles = (animalesCsv: string, eventosCsv: string) => {
-        setIsLoading(true);
         setRawAnimales(animalesCsv);
         setRawEventos(eventosCsv);
     };
 
-    // Re-run processing whenever raw data, settings, or the selected TIME MACHINE snapshot changes
+    // Re-process data when dependencies change
     useEffect(() => {
-        if (rawAnimales && rawEventos) {
-            const activeCustomDate = availableSnapshots.find(s => s.id === selectedSnapshot)?.date || null;
-
-            const processed = processDashboardData(rawAnimales, rawEventos, settings, activeCustomDate);
-            setAnimals(processed.animals);
-            setAnomalies(processed.anomalies);
-
-            // Only update snapshots array if it's the very first load/actualidad, to prevent snapshot shifting
-            if (availableSnapshots.length === 0 || selectedSnapshot === 'actualidad') {
-                setAvailableSnapshots(processed.availableSnapshots);
-            }
-
+        if (!rawAnimales || !rawEventos) {
             setIsLoading(false);
+            return;
         }
-    }, [rawAnimales, rawEventos, settings, selectedSnapshot]);
+
+        setIsLoading(true);
+
+        const currentSnapshot = availableSnapshots.find(s => s.id === selectedSnapshot);
+        const cutoffDate = currentSnapshot?.date || null;
+
+        // Use setTimeout to allow UI to breathe
+        setTimeout(() => {
+            try {
+                const dashboardData = processDashboardData(
+                    rawAnimales,
+                    rawEventos,
+                    settings,
+                    cutoffDate,
+                    inventoryOverrides
+                );
+
+                setAnimals(dashboardData.animals);
+                setAnomalies(dashboardData.anomalies);
+
+                if (availableSnapshots.length === 0 && dashboardData.availableSnapshots.length > 0) {
+                    setAvailableSnapshots(dashboardData.availableSnapshots);
+                }
+            } catch (error) {
+                console.error("Data Processing Error:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }, 100);
+
+    }, [rawAnimales, rawEventos, selectedSnapshot, settings, inventoryOverrides]); // Note inventoryOverrides in dependency array
 
     return (
         <DashboardContext.Provider value={{
             settings, setSettings, animals, availableSnapshots,
             selectedSnapshot, setSelectedSnapshot, anomalies, loadDataFiles, isLoading,
-            activeProfileIde, setActiveProfileIde, activeSireId, setActiveSireId
+            activeProfileIde, setActiveProfileIde, activeSireId, setActiveSireId,
+            inventoryOverrides, setInventoryOverride
         }}>
             {children}
         </DashboardContext.Provider>

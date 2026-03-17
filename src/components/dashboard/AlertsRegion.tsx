@@ -5,7 +5,11 @@ import { useDashboard } from './DashboardContext';
 import { AlertCircle, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
-export default function AlertsRegion() {
+interface AlertsRegionProps {
+    onViewChange?: (view: string) => void;
+}
+
+export default function AlertsRegion({ onViewChange }: AlertsRegionProps) {
     const { animals } = useDashboard();
 
     const activeAnimals = animals.filter(a => a.isActive);
@@ -15,9 +19,13 @@ export default function AlertsRegion() {
     if (redAlerts === 0 && yellowAlerts === 0) return null;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {redAlerts > 0 && (
-                <Alert variant="destructive" className="bg-orange-50/80 backdrop-blur-md border-orange-200 text-orange-800 shadow-sm">
+                <Alert 
+                    variant="destructive" 
+                    className="bg-orange-50/80 backdrop-blur-md border-orange-200 text-orange-800 shadow-sm cursor-pointer hover:shadow-md hover:bg-orange-100/90 transition-all"
+                    onClick={() => onViewChange && onViewChange('alertas')}
+                >
                     <AlertCircle className="h-5 w-5 !text-orange-600" />
                     <AlertTitle className="text-orange-900 font-extrabold tracking-tight">Atención Crítica ({redAlerts})</AlertTitle>
                     <AlertDescription className="text-orange-800/80 font-medium mt-1">
@@ -27,7 +35,10 @@ export default function AlertsRegion() {
             )}
 
             {yellowAlerts > 0 && (
-                <Alert className="bg-amber-50/80 backdrop-blur-md border-amber-200 text-amber-800 shadow-sm">
+                <Alert 
+                    className="bg-amber-50/80 backdrop-blur-md border-amber-200 text-amber-800 shadow-sm cursor-pointer hover:shadow-md hover:bg-amber-100/90 transition-all"
+                    onClick={() => onViewChange && onViewChange('alertas')}
+                >
                     <AlertTriangle className="h-5 w-5 !text-amber-600" />
                     <AlertTitle className="text-amber-900 font-extrabold tracking-tight">Retraso Proyectado ({yellowAlerts})</AlertTitle>
                     <AlertDescription className="text-amber-800/80 font-medium mt-1">

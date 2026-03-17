@@ -33,6 +33,7 @@ export interface ProcessedAnimal {
   padre: string; // "Otros Toros" if null or NO INFO
   masterServiceType: string | null;
   birthDate: Date | null;
+  inventoryStatus: 'active' | 'archived' | 'unregistered';
   isActive: boolean; // active if they have an event on the MOST RECENT weigh date
 
   // Historical data
@@ -41,10 +42,12 @@ export interface ProcessedAnimal {
   // Current metrics (based on the latest event)
   currentWeight: number | null;
   currentGdm: number | null;
+  averageGdm: number | null; // El GDM Histórico Promedio de este animal
   deltaGdm: number | null; // Velocidad de Caja (Current GDM - Previous GDM)
   pde: number | null; // Peso por Día de Edad: (CurrentWeight - BirthWeight) / DaysAlive
   reproductiveState: string | null; // e.g. "Preñada", "Ciclando", "Anestro Superficial", "Anestro Profundo"
   isApta: boolean; // True IF Tacto 1/2 was "Ciclando" AND projected weight > 300kg
+  serviceWindowGdm: number | null; // Velocidad de Caja (GDM) medida en los ~30 días previos a la ventana de servicio
 
   // Horizon Score parts
   scoreGdm: number; // 0-40 (Z-Score based)

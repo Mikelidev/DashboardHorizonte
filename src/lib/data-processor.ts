@@ -79,7 +79,8 @@ export function processDashboardData(
     animalesCsvString: string,
     eventosCsvString: string,
     settings: ThresholdSettings,
-    cutoffDate: Date | null = null
+    cutoffDate: Date | null = null,
+    inventoryOverrides: Record<string, 'active' | 'archived'> = {}
 ): DashboardData {
 
     // 1. Parse CSVs
@@ -252,6 +253,20 @@ export function processDashboardData(
             deltaGdm = currentGdm - previousGdm;
         }
 
+        // Calculate Average GDM (Historical average of all valid GDM readings)
+        let averageGdm: number | null = null;
+        let totalGdm = 0;
+        let gdmCount = 0;
+        for (const ev of chronoEvents) {
+            if (ev.gdm !== null && ev.gdm > 0) { // Only average valid positive growth
+                totalGdm += ev.gdm;
+                gdmCount++;
+            }
+        }
+        if (gdmCount > 0) {
+            averageGdm = totalGdm / gdmCount;
+        }
+
         // Calculate PDE (Peso por Día de Edad) only if we have a valid Birth Date and Current Weight
         let pde: number | null = null;
         if (birthDate && currentWeight !== null) {
@@ -336,7 +351,6 @@ export function processDashboardData(
         // Is active? If she has any recorded events, she's fundamentally active.
         let isActive = animalEvents.length > 0;
 
-        // User Rule: If the LAST recorded event in the cow's timeline is a "Pesada" with NO INFO in both Peso and GDM, she is dead/sold -> Inactive
         // BUGFIX: We must check ALL events on the absolute latest date. If she had an empty Pesada AND a Tacto on the same day, she is still active.
         if (isActive && chronoEvents.length > 0) {
             const latestDate = chronoEvents[0].date.getTime();
@@ -352,11 +366,37 @@ export function processDashboardData(
             }
         }
 
+        // --- INVENTORY RECONCILIATION LOGIC ---
+        let inventoryStatus: 'active' | 'archived' | 'unregistered' = 'active';
+
+        if (isActive && chronoEvents.length > 0) {
+            // Check if the animal was present in the last global session
+            const lastEventDate = chronoEvents[0].date.getTime();
+
+            // We consider the animal "missing" if its last event date is more than 30 days older than the globalMaxTime
+            // (Assuming sessions happen roughly every 30-45 days, 30 days is a good threshold for a "missing" session)
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const isMissingFromLatestSession = (globalMaxTime - lastEventDate) > THIRTY_DAYS_MS;
+
+            if (isMissingFromLatestSession) {
+                inventoryStatus = 'unregistered';
+                isActive = false; // Prevent counting unregistered animals by default
+            }
+        } else if (!isActive && chronoEvents.length > 0) {
+            inventoryStatus = 'archived';
+        }
+
+        // Apply manual overrides
+        if (inventoryOverrides[an.IDE]) {
+            inventoryStatus = inventoryOverrides[an.IDE];
+            isActive = (inventoryStatus === 'active');
+        }
+
         // Search for the latest valid Reproductive state, prioritizing "Tipo de Servicio" for IATF
         let reproState = null;
         let isApta = false;
 
-        for (const ev of animalEvents) {
+        for (const ev of chronoEvents) {
             const evType = ev.type.toUpperCase();
 
             // 1. FINAL VERDICT: Tacto IATF
@@ -413,6 +453,34 @@ export function processDashboardData(
             }
         }
 
+        // --- 4. DATA MINING: SERVICE WINDOW GDM ---
+        // We look for the GDM recorded closest to, but strictly BEFORE, the first actual service or Tacto.
+        // The ideal window is ~30 days, but functionally we just want the last recorded GDM before conception.
+        let serviceWindowGdm: number | null = null;
+
+        // Find the most recent reproductive event that indicates the start of the service period
+        // Usually, this is the IATF or Tacto Anestro for the CURRENT cycle.
+        const latestServicePeriodEvent = chronoEvents.find(e =>
+            e.type.toUpperCase().includes('IATF') ||
+            e.type.toUpperCase().includes('TACTO') ||
+            (e.serviceType && e.serviceType.trim() !== '') ||
+            (e.reproductiveState && e.reproductiveState.trim() !== '')
+        );
+
+        if (latestServicePeriodEvent) {
+            // Find the latest GDM reading that happened ON OR BEFORE this service event
+            const preServiceEvents = chronoEvents.filter(e => e.date.getTime() <= latestServicePeriodEvent.date.getTime() && e.gdm !== null);
+            if (preServiceEvents.length > 0) {
+                // chronoEvents is sorted newest to oldest, so the first one in the filtered list is the closest previous date
+                serviceWindowGdm = preServiceEvents[0].gdm;
+            } else {
+                serviceWindowGdm = currentGdm;
+            }
+        } else {
+            // If no service event at all yet, the "service window" is right now (projected)
+            serviceWindowGdm = currentGdm;
+        }
+
         if (isActive && currentGdm !== null) {
             sumGdm += currentGdm;
             countGdm++;
@@ -425,13 +493,16 @@ export function processDashboardData(
             masterServiceType: masterServiceStr || 'Desconocido', // Safely provide fallback
             birthDate,
             isActive,
+            inventoryStatus,
             eventos: animalEvents,
             currentWeight,
             currentGdm,
+            averageGdm,
             deltaGdm,
             pde,
             reproductiveState: reproState,
             isApta: isApta,
+            serviceWindowGdm,
 
             scoreGdm: 0,
             scoreReproductive: 0,
@@ -511,27 +582,31 @@ export function processDashboardData(
         // Find the latest tacto to determine alerts related to Anestro prior to IATF
         const latestTacto = draft.eventos.find(e => e.type.toUpperCase().includes('TACTO'));
 
+        let isAnestro = false;
         if (latestTacto) {
             const tactoType = latestTacto.type.toUpperCase();
-
-            // If it was Tacto 1 or Tacto 2 and the animal is in Anestro, issue a Warning (Yellow)
-            // to allow the user to take action (hormones/nutrition) before making a final discard.
             if (tactoType.includes('TACTO 1') || tactoType.includes('TACTO 2')) {
                 if (draft.reproductiveState && draft.reproductiveState.toUpperCase().includes('ANESTRO')) {
-                    draft.alertYellow = true; // Still actionable before IATF
+                    isAnestro = true;
                 }
             }
         }
 
-        // Traditional Red Alerts (Only for truly critical failures like negative growth that require isolation)
+        // Traditional Red Alerts (Critical nutritional OR physiological failures)
+        // Red alert: Negative GDM, GDM below min, OR they are in anestrus despite reaching target weight.
         if (draft.currentGdm !== null && (draft.currentGdm < 0 || draft.currentGdm < settings.gdmMin)) {
             draft.alertRed = true;
+        } else if (isAnestro && draft.currentWeight !== null && draft.currentWeight >= settings.targetWeight) {
+             draft.alertRed = true;
         }
 
         // Traditional Yellow Alerts (Projecting past IATF Window)
-        if (settings.iatfWindowStart && draft.daysToTarget !== null) {
+        // ONLY if they haven't reached the weight (daysToTarget > 0)
+        if (settings.iatfWindowStart && draft.daysToTarget !== null && draft.daysToTarget > 0) {
             const projectedDate = new Date();
             projectedDate.setDate(projectedDate.getDate() + draft.daysToTarget);
+            
+            // Si la fecha en la que alcanzan el peso está DESPUÉS de cuando empieza el IATF, están retrasadas
             if (projectedDate.getTime() > settings.iatfWindowStart.getTime()) {
                 if (!draft.alertRed) draft.alertYellow = true;
             }

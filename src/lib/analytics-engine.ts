@@ -55,7 +55,25 @@ export function calculateSireAnalytics(animals: ProcessedAnimal[]): SireAnalytic
         if (an.reproductiveState) {
             const s = an.reproductiveState.toUpperCase();
             if (s.includes('PRENADA') || s.includes('PREÑADA') || s.includes('P IATF')) {
-                stats.prenadasFinal++;
+                // Determine if it was a Natural pregnancy
+                let serviceStr = '';
+                for (let i = 0; i < an.eventos.length; i++) {
+                    const st = an.eventos[i].serviceType;
+                    if (st && st.trim() !== '') {
+                        serviceStr = st.trim().toUpperCase();
+                        break;
+                    }
+                }
+                if (serviceStr === '' && an.masterServiceType) {
+                    serviceStr = an.masterServiceType.trim().toUpperCase();
+                }
+
+                const normalizedStr = serviceStr.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                const isNatural = normalizedStr.includes('REPASO') || normalizedStr.includes('TORO') || normalizedStr.includes('NATURAL') || normalizedStr.includes('MN');
+                
+                if (!isNatural) {
+                    stats.prenadasFinal++;
+                }
             }
         }
         // 3. Eficiencia GDM Accumulator

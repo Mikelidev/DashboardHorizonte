@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home, Activity, Dna, Settings, List, HeartPulse, Target, AlertTriangle, ClipboardList } from 'lucide-react';
+import { Home, Activity, Dna, Settings, List, HeartPulse, Target, AlertTriangle, ClipboardList, GitCompare } from 'lucide-react';
 import clsx from 'clsx';
 
 interface SidebarProps {
@@ -26,6 +26,7 @@ export default function Sidebar({ currentView, setCurrentView }: SidebarProps) {
                 { id: 'productividad', label: 'Productividad', icon: Activity },
                 { id: 'reproduccion', label: 'Datos Reproductivos', icon: HeartPulse },
                 { id: 'forecast', label: 'Proyección IATF', icon: Target },
+                { id: 'comparativa', label: 'Comparativa IDE', icon: GitCompare },
             ]
         },
         {

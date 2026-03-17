@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useDashboard } from './DashboardContext';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
-import { Scale, Target, Activity } from 'lucide-react';
+import { Scale, Target, Activity, AlertCircle, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { ProcessedAnimal } from '@/types';
 
 // Group cows by GDM into distinct "buckets" (e.g., intervals of 0.1 kg/d)
@@ -12,10 +12,13 @@ function calculateEquilibriumCurve(animals: ProcessedAnimal[]) {
     const bucketSize = 0.1; // 100g buckets
 
     for (const an of animals) {
-        if (!an.isActive || an.currentGdm === null || !an.reproductiveState) continue;
+        // Use the new serviceWindowGdm for a more precise biological correlation, fallback to currentGdm
+        const evalGdm = an.serviceWindowGdm !== null ? an.serviceWindowGdm : an.currentGdm;
+
+        if (!an.isActive || evalGdm === null || !an.reproductiveState) continue;
 
         // Round GDM to nearest bucket size (e.g., 0.43 -> 0.4, 0.48 -> 0.5)
-        const bucketKey = Math.round(an.currentGdm / bucketSize) * bucketSize;
+        const bucketKey = Math.round(evalGdm / bucketSize) * bucketSize;
 
         if (!buckets.has(bucketKey)) {
             buckets.set(bucketKey, { total: 0, prenadas: 0 });
@@ -47,10 +50,49 @@ export default function EquilibriumChart() {
 
     const curveData = useMemo(() => calculateEquilibriumCurve(animals), [animals]);
 
+    const totalSampleLote = useMemo(() => {
+        return animals.filter(an => an.isActive && an.reproductiveState && (an.serviceWindowGdm !== null || an.currentGdm !== null)).length;
+    }, [animals]);
+
     // Find the GDM bucket where pregnancy crosses the 60% standard threshold
-    const equilibriumPoint = useMemo(() => {
-        return curveData.find(d => d.tasaPrenez >= 60)?.gdmBucket;
-    }, [curveData]);
+    const equilibriumData = useMemo(() => {
+        const point = curveData.find(d => d.tasaPrenez >= 60);
+
+        if (!point) return { point: undefined, confidenceStatus: 'INSUFICIENTE', reason: 'No se alcanzó el 60% de preñez en ningún estrato.' };
+
+        // Criterio de Muestra Mínima (n) - A NIVEL REBAÑO/LOTE, no por estrato.
+        if (totalSampleLote < 20) {
+            return {
+                point: point.gdmBucket,
+                confidenceStatus: 'INHABILITADO',
+                reason: `Esperando más datos de campo en el lote (n = ${totalSampleLote} < 20 vacas evaluadas).`,
+                nEstrato: point.muestra,
+                nLote: totalSampleLote,
+                prenez: point.tasaPrenez
+            };
+        }
+
+        // Criterio de Correlación Biológica e Índice de Preñez
+        if (point.tasaPrenez < 15) {
+            return { point: point.gdmBucket, confidenceStatus: 'CRITICO', reason: 'Muestra insuficiente (Preñez < 15%).', nEstrato: point.muestra, nLote: totalSampleLote, prenez: point.tasaPrenez };
+        }
+
+        // Biological Error check: Losing weight correlates with high pregnancy? That's suspicious.
+        if (point.gdmBucket < -0.10) {
+            return { point: point.gdmBucket, confidenceStatus: 'BAJA_CONFIANZA', reason: 'Error Biológico: Correlación negativa detectada.', nEstrato: point.muestra, nLote: totalSampleLote, prenez: point.tasaPrenez };
+        }
+
+        if (point.tasaPrenez >= 15 && point.tasaPrenez <= 40) {
+            return { point: point.gdmBucket, confidenceStatus: 'ADVERTENCIA', reason: 'Tendencia en formación: Se requiere mayor estabilidad en los datos para confirmar el punto de equilibrio.', nEstrato: point.muestra, nLote: totalSampleLote, prenez: point.tasaPrenez };
+        }
+
+        // Default to Validado si preñez > 40% y correlación es lógica (GDM >= -0.10)
+        return { point: point.gdmBucket, confidenceStatus: 'VALIDADO', reason: 'Análisis biológicamente consistente e índice de preñez confiable.', nEstrato: point.muestra, nLote: totalSampleLote, prenez: point.tasaPrenez };
+
+    }, [curveData, totalSampleLote]);
+
+    const eqPoint = equilibriumData.point;
+    const confidence = equilibriumData.confidenceStatus;
 
     if (curveData.length === 0) {
         return (
@@ -62,13 +104,48 @@ export default function EquilibriumChart() {
         );
     }
 
+    // Determine UI render properties based on Confidence
+    let valueColor = "text-indigo-600";
+    let unitColor = "text-indigo-400";
+    let badgeBg = "bg-indigo-100 text-indigo-700 border-indigo-200";
+    let badgeIcon = <CheckCircle2 className="w-3.5 h-3.5" />;
+    let badgeText = "Validado";
+
+    if (confidence === 'INHABILITADO') {
+        valueColor = "text-slate-400";
+        unitColor = "text-slate-300";
+        badgeBg = "bg-slate-100 text-slate-600 border-slate-200";
+        badgeIcon = <Info className="w-3.5 h-3.5" />;
+        badgeText = "Inhabilitado";
+    } else if (confidence === 'CRITICO' || confidence === 'BAJA_CONFIANZA') {
+        valueColor = "text-rose-600";
+        unitColor = "text-rose-400";
+        badgeBg = "bg-rose-100 text-rose-700 border-rose-200";
+        badgeIcon = <AlertCircle className="w-3.5 h-3.5" />;
+        badgeText = confidence === 'CRITICO' ? "Muestra Insuficiente" : "Baja Confianza";
+    } else if (confidence === 'ADVERTENCIA') {
+        valueColor = "text-amber-600";
+        unitColor = "text-amber-500";
+        badgeBg = "bg-amber-100 text-amber-700 border-amber-200";
+        badgeIcon = <AlertTriangle className="w-3.5 h-3.5" />;
+        badgeText = "En Formación";
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-end">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Punto de Equilibrio Nutricional</h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-2xl font-bold text-slate-800">Punto de Equilibrio Nutricional</h2>
+                        {eqPoint !== undefined && (
+                            <div className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border ${badgeBg} cursor-help`} title={equilibriumData.reason}>
+                                {badgeIcon}
+                                {badgeText}
+                            </div>
+                        )}
+                    </div>
                     <p className="text-slate-500 mt-1 flex items-center gap-2">
-                        Data Mining: Umbral de Velocidad de Caja (GDM) vs Ciclicidad Empírica.
+                        Data Mining: Umbral de Velocidad de Caja (GDM) vs Ciclicidad Empírica ({curveData.length > 0 ? 'Ventana de Servicio' : 'Global'}).
                     </p>
                 </div>
             </div>
@@ -82,17 +159,30 @@ export default function EquilibriumChart() {
                     </h3>
                     <div className="text-center">
                         <p className="text-sm text-slate-500 font-semibold mb-2">Para garantizar &gt;60% de Preñez</p>
-                        {equilibriumPoint !== undefined ? (
-                            <h3 className="text-5xl font-extrabold text-indigo-600">
-                                {equilibriumPoint.toFixed(2)}<span className="text-2xl text-indigo-400">kg/d</span>
-                            </h3>
+                        {eqPoint !== undefined ? (
+                            <div className="group relative inline-block">
+                                <h3 className={`text-5xl font-extrabold ${valueColor} transition-colors duration-300`}>
+                                    {eqPoint > 0 && confidence !== 'BAJA_CONFIANZA' ? '+' : ''}{eqPoint.toFixed(2)}<span className={`text-2xl ${unitColor} ml-1`}>kg/d</span>
+                                </h3>
+
+                                <div className="mt-2 text-sm text-slate-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {equilibriumData.nLote} vientres evaluados en total.<br />
+                                    <span className="text-xs opacity-80">
+                                        Estrato {eqPoint} kg/d: n={equilibriumData.nEstrato} ({equilibriumData.prenez?.toFixed(1)}% preñez estratificada)
+                                    </span>
+                                </div>
+                            </div>
                         ) : (
                             <h3 className="text-2xl font-bold text-rose-500">
                                 No Alcanzado
                             </h3>
                         )}
                         <p className="text-xs text-slate-400 mt-6 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            Descubierto mediante el cruce algorítmico del registro histórico de tactos corporales contra las últimas fluctuaciones termodinámicas de peso.
+                            {confidence === 'INHABILITADO'
+                                ? "Esperando más recolección de datos de campo para validar estadísticamente este umbral (se requieren al menos 20 vientres por estrato)."
+                                : confidence === 'ADVERTENCIA'
+                                    ? "Tendencia en formación: Se requiere mayor estabilidad en los datos para confirmar este punto de equilibrio."
+                                    : "Descubierto mediante el cruce algorítmico del registro histórico de tactos corporales contra las fluctuaciones de peso previas al servicio."}
                         </p>
                     </div>
                 </motion.div>
@@ -131,8 +221,8 @@ export default function EquilibriumChart() {
                                 />
 
                                 <ReferenceLine y={60} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'top', value: 'Umbral Económico 60%', fill: '#f59e0b', fontSize: 10 }} />
-                                {equilibriumPoint !== undefined && (
-                                    <ReferenceLine x={equilibriumPoint} stroke="#6366f1" strokeDasharray="3 3" label={{ position: 'right', value: 'Punto EQ', fill: '#6366f1', fontSize: 10 }} />
+                                {eqPoint !== undefined && (
+                                    <ReferenceLine x={eqPoint} stroke={confidence === 'INHABILITADO' ? '#94a3b8' : confidence === 'BAJA_CONFIANZA' || confidence === 'CRITICO' ? '#f43f5e' : confidence === 'ADVERTENCIA' ? '#d97706' : '#6366f1'} strokeDasharray="3 3" label={{ position: 'right', value: 'Punto EQ', fill: confidence === 'INHABILITADO' ? '#94a3b8' : confidence === 'BAJA_CONFIANZA' || confidence === 'CRITICO' ? '#f43f5e' : confidence === 'ADVERTENCIA' ? '#d97706' : '#6366f1', fontSize: 10 }} />
                                 )}
 
                                 <Line type="monotone" dataKey="tasaPrenez" stroke="#6366f1" strokeWidth={4} activeDot={{ r: 8, fill: '#6366f1', strokeWidth: 0 }} />

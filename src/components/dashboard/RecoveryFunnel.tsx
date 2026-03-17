@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from './DashboardContext';
 import { calculateEvolution, EvolutionMetrics } from '@/lib/analytics-engine';

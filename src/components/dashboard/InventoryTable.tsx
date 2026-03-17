@@ -131,7 +131,10 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
                                     Peso Actual {getSortIcon('currentWeight')}
                                 </th>
                                 <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('currentGdm')}>
-                                    GDM Acum. {getSortIcon('currentGdm')}
+                                    GDM Actual {getSortIcon('currentGdm')}
+                                </th>
+                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('averageGdm')}>
+                                    GDM Promedio {getSortIcon('averageGdm')}
                                 </th>
                                 <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('reproductiveState')}>
                                     Reproductivo {getSortIcon('reproductiveState')}
@@ -169,6 +172,11 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
                                         <TableCell className="px-4">
                                             <span className={`font-semibold ${animal.currentGdm !== null && animal.currentGdm < 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
                                                 {animal.currentGdm?.toFixed(3) || '-'}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="px-4">
+                                            <span className={`font-semibold ${animal.averageGdm !== null && animal.averageGdm < 0 ? 'text-orange-600' : 'text-emerald-700'}`}>
+                                                {animal.averageGdm?.toFixed(3) || '-'}
                                             </span>
                                         </TableCell>
                                         <TableCell className="px-4">

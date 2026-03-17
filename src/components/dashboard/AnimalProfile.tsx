@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo } from 'react';
 import { useDashboard } from './DashboardContext';
 import { motion, AnimatePresence } from 'framer-motion';

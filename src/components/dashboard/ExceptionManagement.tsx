@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useDashboard } from './DashboardContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ArrowDown, ArrowUp, Minus, Activity, CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowDown, ArrowUp, Minus, Activity, CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { ProcessedAnimal } from '@/types';
 import { ScrollArea } from '../ui/scroll-area';
 import AlertCards from './AlertCards';
@@ -75,6 +75,10 @@ type SortConfig = { key: keyof ProcessedAnimal | '', direction: SortDirection };
 export default function ExceptionManagement({ onViewChange }: { onViewChange?: (view: string) => void }) {
     const { animals, settings, anomalies, setActiveProfileIde } = useDashboard();
     const [isQaExpanded, setIsQaExpanded] = useState(false);
+    
+    // Filters for new side-by-side tables
+    const [redAlertFilter, setRedAlertFilter] = useState<string>('Todas');
+    const [yellowAlertFilter, setYellowAlertFilter] = useState<string>('Todas');
 
     // Removing Sort states for Top and Bottom lists as they are moved.
 
@@ -89,12 +93,26 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
         // At-risk Cows (Yellow)
         const delayedCows = active.filter(a => a.alertYellow && !a.alertRed);
 
+        const criticalCowsWithReason = criticalCows.map(ano => {
+            let reason = 'Alerta Crítica Detectada';
+            if (ano.currentGdm !== null && ano.currentGdm < 0) reason = 'GDM Negativo (Pérdida de Peso Histórica)';
+            else if (ano.currentGdm !== null && ano.currentGdm > 0 && ano.currentGdm < settings.gdmMin) reason = `GDM por debajo del mínimo permitido (< ${settings.gdmMin} kg/d)`;
+            else if (ano.reproductiveState?.toUpperCase().includes('ANESTRO') && ano.currentWeight !== null && ano.currentWeight >= settings.targetWeight) reason = 'En Anestro habiendo superado el peso objetivo';
+            else if (ano.scoreCategory === 'DESCARTE') reason = 'Score Global Categoría Descarte';
+            return { ...ano, alertReason: reason };
+        });
+
+        const delayedCowsWithReason = delayedCows.map(ano => ({
+            ...ano,
+            alertReason: 'No alcanzará el peso objetivo para el IATF'
+        }));
+
         return {
             totalActive: active.length,
-            criticalCows,
-            delayedCows
+            criticalCows: criticalCowsWithReason,
+            delayedCows: delayedCowsWithReason
         };
-    }, [animals]);
+    }, [animals, settings]);
 
     // Group anomalies by category
     const groupedAnomalies = useMemo(() => {
@@ -118,7 +136,126 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
             {/* Alert Summary Cards */}
             <AlertCards />
 
-            {/* Rankings Top/Bottom Lists moved to TorosView */}
+            {/* Side-by-side Alert Tables */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                
+                {/* Tabla 1: Atención Crítica (Red Alerts) */}
+                <div className="bg-white/40 rounded-2xl overflow-hidden shadow-sm border border-rose-200/60 opacity-95 flex flex-col">
+                    <div className="bg-rose-50/80 px-5 py-4 border-b border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <AlertCircle className="w-5 h-5 text-rose-600" />
+                            <h3 className="font-extrabold text-rose-900">Atención Crítica</h3>
+                            <span className="text-xs font-bold bg-rose-200 text-rose-800 px-2 py-1 rounded-full">{alerts.criticalCows.length}</span>
+                        </div>
+                        <select 
+                            aria-label="Filtrar por tipo de atención crítica"
+                            title="Filtrar Alertas Rojas"
+                            className="bg-white border border-rose-200 text-rose-900 text-xs rounded-lg focus:ring-rose-500 focus:border-rose-500 block p-2 shadow-sm truncate max-w-[200px]"
+                            value={redAlertFilter}
+                            onChange={(e) => setRedAlertFilter(e.target.value)}
+                        >
+                            <option value="Todas">Todas las Alertas</option>
+                            {Array.from(new Set(alerts.criticalCows.map(c => c.alertReason))).map(reason => (
+                                <option key={reason} value={reason}>{reason}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="overflow-y-auto max-h-[280px] w-full">
+                        {alerts.criticalCows.filter(c => redAlertFilter === 'Todas' || c.alertReason === redAlertFilter).length > 0 ? (
+                            <table className="w-full text-left border-collapse">
+                                <thead className="sticky top-0 bg-rose-50/95 backdrop-blur-sm z-10 border-b border-rose-100 shadow-sm">
+                                    <tr className="text-rose-900 uppercase tracking-wider text-[11px]">
+                                        <th className="py-3 px-5 font-bold w-32">IDE</th>
+                                        <th className="py-3 px-5 font-bold">Diagnóstico Biológico</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y text-sm divide-rose-50">
+                                    {alerts.criticalCows
+                                        .filter(c => redAlertFilter === 'Todas' || c.alertReason === redAlertFilter)
+                                        .map(ano => (
+                                            <tr key={ano.ide} className="hover:bg-rose-50/50 transition-colors group">
+                                                <td 
+                                                    className="py-3 px-5 font-mono font-bold text-rose-600 whitespace-nowrap cursor-pointer group-hover:underline"
+                                                    onClick={() => {
+                                                        setActiveProfileIde(ano.ide);
+                                                        if (onViewChange) onViewChange('profile');
+                                                    }}
+                                                >
+                                                    {ano.ide}
+                                                </td>
+                                                <td className="py-3 px-5 text-slate-700">{ano.alertReason}</td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center p-6 text-slate-400">
+                                <CheckCircle2 className="w-10 h-10 mb-2 text-emerald-400 opacity-50" />
+                                <p className="font-medium text-center text-sm">No se detectaron animales en estado crítico.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Tabla 2: Retraso Proyectado (Yellow Alerts) */}
+                <div className="bg-white/40 rounded-2xl overflow-hidden shadow-sm border border-amber-200/60 opacity-95 flex flex-col">
+                    <div className="bg-amber-50/80 px-5 py-4 border-b border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <AlertTriangle className="w-5 h-5 text-amber-600" />
+                            <h3 className="font-extrabold text-amber-900">Retraso Proyectado</h3>
+                            <span className="text-xs font-bold bg-amber-200 text-amber-800 px-2 py-1 rounded-full">{alerts.delayedCows.length}</span>
+                        </div>
+                        <select 
+                            aria-label="Filtrar por motivo de retraso proyectado"
+                            title="Filtrar Alertas Amarillas"
+                            className="bg-white border border-amber-200 text-amber-900 text-xs rounded-lg focus:ring-amber-500 focus:border-amber-500 block p-2 shadow-sm truncate max-w-[200px]"
+                            value={yellowAlertFilter}
+                            onChange={(e) => setYellowAlertFilter(e.target.value)}
+                        >
+                            <option value="Todas">Todas las Alertas</option>
+                            {Array.from(new Set(alerts.delayedCows.map(c => c.alertReason))).map(reason => (
+                                <option key={reason} value={reason}>{reason}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="overflow-y-auto max-h-[280px] w-full">
+                        {alerts.delayedCows.filter(c => yellowAlertFilter === 'Todas' || c.alertReason === yellowAlertFilter).length > 0 ? (
+                            <table className="w-full text-left border-collapse">
+                                <thead className="sticky top-0 bg-amber-50/95 backdrop-blur-sm z-10 border-b border-amber-100 shadow-sm">
+                                    <tr className="text-amber-900 uppercase tracking-wider text-[11px]">
+                                        <th className="py-3 px-5 font-bold w-32">IDE</th>
+                                        <th className="py-3 px-5 font-bold">Pronóstico Productivo</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y text-sm divide-amber-50">
+                                    {alerts.delayedCows
+                                        .filter(c => yellowAlertFilter === 'Todas' || c.alertReason === yellowAlertFilter)
+                                        .map(ano => (
+                                        <tr key={ano.ide} className="hover:bg-amber-50/50 transition-colors group">
+                                            <td 
+                                                className="py-3 px-5 font-mono font-bold text-amber-600 whitespace-nowrap cursor-pointer group-hover:underline"
+                                                onClick={() => {
+                                                    setActiveProfileIde(ano.ide);
+                                                    if (onViewChange) onViewChange('profile');
+                                                }}
+                                            >
+                                                {ano.ide}
+                                            </td>
+                                            <td className="py-3 px-5 text-slate-700">{ano.alertReason}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center p-6 text-slate-400">
+                                <CheckCircle2 className="w-10 h-10 mb-2 text-emerald-400 opacity-50" />
+                                <p className="font-medium text-center text-sm">Todos los animales en seguimiento están dentro de la ventana de tiempo.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+            </div>
 
             {/* QA AUDIT DATA ANOMALIES SECTION */}
             {anomalies && anomalies.length > 0 && (

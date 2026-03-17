@@ -1,9 +1,7 @@
-'use client';
-
+"use client";
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import HeaderKPIs from './HeaderKPIs';
-import AlertsRegion from './AlertsRegion';
 import WeightDistributionChart from './WeightDistributionChart';
 import HealthDonuts from './HealthDonuts';
 import TorosView from './TorosView';
@@ -15,7 +13,9 @@ import AnimalProfile from './AnimalProfile';
 import SireProfile from './SireProfile';
 import ConfigPanel from './ConfigPanel';
 import InventoryTable from './InventoryTable';
+import AnimalComparisonView from './AnimalComparisonView';
 import AlertCards from './AlertCards';
+import ReconciliationAlert from './ReconciliationAlert';
 import { useDashboard } from './DashboardContext';
 import { CloudDownload, AlertCircle } from 'lucide-react';
 
@@ -87,18 +87,18 @@ export default function DashboardLayout() {
                 ) : !hasData || isLoading ? (
                     <div className="flex flex-col items-center justify-center h-full border-2 border-dashed border-slate-200 rounded-3xl p-16 glass">
                         <CloudDownload className="w-16 h-16 text-emerald-500 mb-6 drop-shadow-sm animate-bounce" />
-                        <h2 className="text-3xl font-extrabold text-slate-800 mb-3 tracking-tight">Sincronizando con Google Sheets</h2>
+                        <h2 className="3xl font-extrabold text-slate-800 mb-3 tracking-tight">Sincronizando con Google Sheets</h2>
                         <p className="text-slate-500 mb-10 max-w-md text-center text-base">
                             Descargando y procesando la última versión del rodeo. Por favor espere unos segundos...
                         </p>
                     </div>
                 ) : (
                     <div className="animate-in fade-in duration-700 max-w-[1400px] mx-auto flex flex-col gap-8">
-                        <HeaderKPIs />
+                        <HeaderKPIs currentView={currentView} onViewChange={setCurrentView} />
                         {currentView === 'dashboard' && (
                             <>
+                                <ReconciliationAlert />
                                 <AlertCards />
-                                <AlertsRegion />
                                 <HealthDonuts />
                                 <WeightDistributionChart />
                             </>
@@ -129,6 +129,9 @@ export default function DashboardLayout() {
                         )}
                         {currentView === 'config' && (
                             <ConfigPanel />
+                        )}
+                        {currentView === 'comparativa' && (
+                            <AnimalComparisonView onViewChange={setCurrentView} />
                         )}
                     </div>
                 )}
