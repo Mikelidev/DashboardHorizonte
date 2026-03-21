@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from './DashboardContext';
-import { AlertCircle, AlertTriangle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { AlertCircle, AlertTriangle, ChevronRight } from 'lucide-react';
 
 interface AlertsRegionProps {
     onViewChange?: (view: string) => void;
@@ -19,32 +18,41 @@ export default function AlertsRegion({ onViewChange }: AlertsRegionProps) {
     if (redAlerts === 0 && yellowAlerts === 0) return null;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {redAlerts > 0 && (
-                <Alert 
-                    variant="destructive" 
-                    className="bg-orange-50/80 backdrop-blur-md border-orange-200 text-orange-800 shadow-sm cursor-pointer hover:shadow-md hover:bg-orange-100/90 transition-all"
+                <button
                     onClick={() => onViewChange && onViewChange('alertas')}
+                    className="group flex items-center gap-4 bg-rose-50/70 backdrop-blur border border-rose-200/80 border-l-4 border-l-rose-500 rounded-xl px-4 py-3 shadow-sm hover:shadow-md hover:bg-rose-50 transition-all text-left w-full"
                 >
-                    <AlertCircle className="h-5 w-5 !text-orange-600" />
-                    <AlertTitle className="text-orange-900 font-extrabold tracking-tight">Atención Crítica ({redAlerts})</AlertTitle>
-                    <AlertDescription className="text-orange-800/80 font-medium mt-1">
-                        Existen {redAlerts} animales con GDM negativo, GDM por debajo del mínimo, o en Anestro habiendo alcanzado el peso.
-                    </AlertDescription>
-                </Alert>
+                    <div className="shrink-0 p-2 bg-rose-100 rounded-lg">
+                        <AlertCircle className="h-4 w-4 text-rose-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-extrabold text-rose-900 truncate">Atención Crítica ({redAlerts})</p>
+                        <p className="text-xs font-medium text-rose-700/80 truncate mt-0.5">
+                            GDM negativo · GDM bajo mínimo · Anestro con peso alcanzado
+                        </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-rose-400 shrink-0 group-hover:translate-x-1 transition-transform" />
+                </button>
             )}
 
             {yellowAlerts > 0 && (
-                <Alert 
-                    className="bg-amber-50/80 backdrop-blur-md border-amber-200 text-amber-800 shadow-sm cursor-pointer hover:shadow-md hover:bg-amber-100/90 transition-all"
+                <button
                     onClick={() => onViewChange && onViewChange('alertas')}
+                    className="group flex items-center gap-4 bg-amber-50/70 backdrop-blur border border-amber-200/80 border-l-4 border-l-amber-500 rounded-xl px-4 py-3 shadow-sm hover:shadow-md hover:bg-amber-50 transition-all text-left w-full"
                 >
-                    <AlertTriangle className="h-5 w-5 !text-amber-600" />
-                    <AlertTitle className="text-amber-900 font-extrabold tracking-tight">Retraso Proyectado ({yellowAlerts})</AlertTitle>
-                    <AlertDescription className="text-amber-800/80 font-medium mt-1">
-                        Existen {yellowAlerts} animales que, según su GDM actual, no alcanzarán el peso objetivo antes de la ventana IATF.
-                    </AlertDescription>
-                </Alert>
+                    <div className="shrink-0 p-2 bg-amber-100 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-extrabold text-amber-900 truncate">Retraso Proyectado ({yellowAlerts})</p>
+                        <p className="text-xs font-medium text-amber-700/80 truncate mt-0.5">
+                            No alcanzará el peso objetivo antes del IATF
+                        </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-amber-400 shrink-0 group-hover:translate-x-1 transition-transform" />
+                </button>
             )}
         </div>
     );

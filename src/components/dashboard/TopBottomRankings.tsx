@@ -72,20 +72,26 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
             <tr><td colSpan={5} className="text-slate-500 text-center py-8">No hay suficientes datos procesados.</td></tr>
         );
         return list.map((cow, index) => (
-            <tr key={cow.ide} className={`hover:bg-slate-50 border-b border-slate-100 ${isTop ? 'hover:bg-emerald-50/30' : 'hover:bg-rose-50/30'} transition-colors`}>
-                <td className="py-3 px-4 font-mono font-bold text-indigo-600 cursor-pointer hover:underline" onClick={() => { setActiveProfileIde(cow.ide); if (onViewChange) onViewChange('profile'); }}>
-                    {cow.ide}
+            <tr key={cow.ide} className={`border-b border-slate-100 ${isTop ? 'hover:bg-emerald-50/40' : 'hover:bg-rose-50/40'} ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} transition-colors`}>
+                <td className="py-3 px-4 max-w-[180px]">
+                    <span
+                        className="font-mono font-bold text-indigo-600 cursor-pointer hover:underline block truncate"
+                        title={cow.ide}
+                        onClick={() => { setActiveProfileIde(cow.ide); if (onViewChange) onViewChange('profile'); }}
+                    >
+                        {cow.ide}
+                    </span>
                 </td>
                 <td className="py-3 px-4 text-slate-600 font-medium">
                     {cow.reproductiveState || 'Sin Tacto'}
                 </td>
-                <td className="py-3 px-4 text-right">
+                <td className="py-3 px-4 text-right tabular-nums">
                     <span className={`font-semibold ${isTop ? 'text-emerald-600' : 'text-rose-600'}`}>{cow.currentGdm?.toFixed(3) || '-'}</span>
                 </td>
-                <td className="py-3 px-4 text-right">
+                <td className="py-3 px-4 text-right tabular-nums">
                     <span className={`font-semibold ${isTop ? 'text-emerald-600' : 'text-rose-600'}`}>{cow.pde !== null && cow.pde !== undefined ? cow.pde.toFixed(3) : '-'}</span>
                 </td>
-                <td className="py-3 px-4 text-right font-black text-slate-700">
+                <td className="py-3 px-4 text-right font-black text-slate-700 tabular-nums">
                     {cow.scoreTotal}
                 </td>
             </tr>

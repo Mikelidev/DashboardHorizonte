@@ -118,31 +118,31 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
                     <table className="w-full caption-bottom text-sm relative">
                         <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-20 border-b border-slate-200 shadow-sm [&_tr]:border-b-0">
                             <TableRow className="hover:bg-transparent">
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('ide')}>
+                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[140px] max-w-[200px]" onClick={() => handleSort('ide')}>
                                     IDE {getSortIcon('ide')}
                                 </th>
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('raza')}>
+                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[100px]" onClick={() => handleSort('raza')}>
                                     Raza {getSortIcon('raza')}
                                 </th>
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('padre')}>
+                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[110px]" onClick={() => handleSort('padre')}>
                                     Padre {getSortIcon('padre')}
                                 </th>
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('currentWeight')}>
+                                <th className="h-12 px-4 text-right align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[100px]" onClick={() => handleSort('currentWeight')}>
                                     Peso Actual {getSortIcon('currentWeight')}
                                 </th>
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('currentGdm')}>
+                                <th className="h-12 px-4 text-right align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[100px]" onClick={() => handleSort('currentGdm')}>
                                     GDM Actual {getSortIcon('currentGdm')}
                                 </th>
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('averageGdm')}>
+                                <th className="h-12 px-4 text-right align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[110px]" onClick={() => handleSort('averageGdm')}>
                                     GDM Promedio {getSortIcon('averageGdm')}
                                 </th>
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('reproductiveState')}>
+                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[130px]" onClick={() => handleSort('reproductiveState')}>
                                     Reproductivo {getSortIcon('reproductiveState')}
                                 </th>
-                                <th className="h-12 px-4 text-left align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none" onClick={() => handleSort('daysToTarget')}>
+                                <th className="h-12 px-4 text-right align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[90px]" onClick={() => handleSort('daysToTarget')}>
                                     Dias P/Obj. {getSortIcon('daysToTarget')}
                                 </th>
-                                <th className="h-12 px-4 text-right align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none pr-6" onClick={() => handleSort('scoreTotal')}>
+                                <th className="h-12 px-4 text-right align-middle font-semibold whitespace-nowrap text-slate-500 cursor-pointer select-none min-w-[80px] pr-6" onClick={() => handleSort('scoreTotal')}>
                                     Score {getSortIcon('scoreTotal')}
                                 </th>
                             </TableRow>
@@ -155,57 +155,65 @@ export default function InventoryTable({ onViewChange }: { onViewChange?: (view:
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                sortedAnimals.map(animal => (
-                                    <TableRow key={animal.ide} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-white">
-                                        <TableCell
-                                            className="font-bold text-indigo-600 cursor-pointer hover:underline px-4"
-                                            onClick={() => {
-                                                setActiveProfileIde(animal.ide);
-                                                if (onViewChange) onViewChange('profile');
-                                            }}
-                                        >
-                                            {animal.ide}
-                                        </TableCell>
-                                        <TableCell className="text-slate-600 px-4">{animal.raza}</TableCell>
-                                        <TableCell className="text-slate-600 font-medium px-4">{animal.padre}</TableCell>
-                                        <TableCell className="text-slate-600 px-4">{animal.currentWeight} <span className="text-slate-400 text-xs">kg</span></TableCell>
-                                        <TableCell className="px-4">
-                                            <span className={`font-semibold ${animal.currentGdm !== null && animal.currentGdm < 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                                                {animal.currentGdm?.toFixed(3) || '-'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="px-4">
-                                            <span className={`font-semibold ${animal.averageGdm !== null && animal.averageGdm < 0 ? 'text-orange-600' : 'text-emerald-700'}`}>
-                                                {animal.averageGdm?.toFixed(3) || '-'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="px-4">
-                                            {animal.reproductiveState ? (
-                                                <Badge variant="outline" className={`font-medium border-transparent
+                            sortedAnimals.map((animal, idx) => (
+                                <TableRow key={animal.ide} className={`border-b border-slate-100 hover:bg-indigo-50/20 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
+                                    {/* IDE: truncated with ellipsis, max-width constrained */}
+                                    <TableCell
+                                        className="font-bold text-indigo-600 cursor-pointer hover:underline px-4 max-w-[200px]"
+                                        onClick={() => {
+                                            setActiveProfileIde(animal.ide);
+                                            if (onViewChange) onViewChange('profile');
+                                        }}
+                                    >
+                                        <span className="block truncate" title={animal.ide}>{animal.ide}</span>
+                                    </TableCell>
+                                    <TableCell className="text-slate-600 px-4 whitespace-nowrap">{animal.raza}</TableCell>
+                                    <TableCell className="text-slate-600 font-medium px-4 whitespace-nowrap">{animal.padre}</TableCell>
+                                    {/* Peso: right-aligned, no decimals, unit label */}
+                                    <TableCell className="text-slate-800 font-semibold px-4 text-right tabular-nums">
+                                        {animal.currentWeight !== null ? animal.currentWeight : '-'}
+                                        {animal.currentWeight !== null && <span className="text-slate-400 text-xs ml-1">kg</span>}
+                                    </TableCell>
+                                    {/* GDM Actual: right-aligned, always 3 decimals */}
+                                    <TableCell className="px-4 text-right tabular-nums">
+                                        <span className={`font-semibold ${animal.currentGdm !== null && animal.currentGdm < 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                            {animal.currentGdm !== null ? animal.currentGdm.toFixed(3) : '-'}
+                                        </span>
+                                    </TableCell>
+                                    {/* GDM Promedio: right-aligned, always 3 decimals */}
+                                    <TableCell className="px-4 text-right tabular-nums">
+                                        <span className={`font-semibold ${animal.averageGdm !== null && animal.averageGdm < 0 ? 'text-orange-600' : 'text-emerald-700'}`}>
+                                            {animal.averageGdm !== null ? animal.averageGdm.toFixed(3) : '-'}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="px-4">
+                                        {animal.reproductiveState ? (
+                                            <Badge variant="outline" className={`font-medium border-transparent
                           ${animal.reproductiveState.includes('PREÑADA') ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : ''}
                           ${animal.reproductiveState.includes('SUPERFICIAL') ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : ''}
                           ${animal.reproductiveState.includes('PROFUNDO') ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : ''}
                         `}>
-                                                    {animal.reproductiveState}
-                                                </Badge>
-                                            ) : '-'}
-                                        </TableCell>
-                                        <TableCell className="px-4">
-                                            {animal.daysToTarget !== null ? (
-                                                <span className={`${animal.alertYellow ? 'text-amber-600 font-bold' : 'text-slate-600'}`}>
-                                                    {animal.daysToTarget} <span className="text-xs text-slate-400 font-normal">días</span>
-                                                </span>
-                                            ) : <span className="text-slate-400">-</span>}
-                                        </TableCell>
-                                        <TableCell className="text-right px-4 pr-6">
-                                            <div className="flex items-center justify-end gap-2 text-slate-800">
-                                                {animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" title="Alerta Crítica"></span>}
-                                                {animal.alertYellow && !animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" title="Alerta Retraso IATF"></span>}
-                                                <span className="font-bold text-lg">{animal.scoreTotal}</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                                {animal.reproductiveState}
+                                            </Badge>
+                                        ) : '-'}
+                                    </TableCell>
+                                    {/* Days to target: right-aligned */}
+                                    <TableCell className="px-4 text-right tabular-nums">
+                                        {animal.daysToTarget !== null ? (
+                                            <span className={`${animal.alertYellow ? 'text-amber-600 font-bold' : 'text-slate-600'}`}>
+                                                {animal.daysToTarget} <span className="text-xs text-slate-400 font-normal">días</span>
+                                            </span>
+                                        ) : <span className="text-slate-400">-</span>}
+                                    </TableCell>
+                                    <TableCell className="text-right px-4 pr-6">
+                                        <div className="flex items-center justify-end gap-2 text-slate-800">
+                                            {animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50 shrink-0" title="Alerta Crítica"></span>}
+                                            {animal.alertYellow && !animal.alertRed && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50 shrink-0" title="Alerta Retraso IATF"></span>}
+                                            <span className="font-bold text-lg tabular-nums">{animal.scoreTotal}</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
                             )}
                         </TableBody>
                     </table>

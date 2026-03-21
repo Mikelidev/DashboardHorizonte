@@ -77,7 +77,7 @@ export default function DashboardLayout() {
         <div className="flex min-h-screen bg-transparent text-slate-800 font-sans">
             <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
 
-            <main className="flex-1 p-10 overflow-y-auto">
+            <main className="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto min-w-0">
                 {fetchError ? (
                     <div className="flex flex-col items-center justify-center h-full border border-red-200 bg-red-50/50 rounded-3xl p-16">
                         <AlertCircle className="w-16 h-16 text-red-500 mb-6 drop-shadow-sm" />

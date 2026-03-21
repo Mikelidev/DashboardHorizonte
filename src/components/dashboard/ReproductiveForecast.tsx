@@ -135,7 +135,7 @@ export default function ReproductiveForecast() {
                 <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }} className="glass rounded-2xl p-6 border border-slate-200/50 lg:col-span-2">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-slate-800">Tasa de Preñez Empírica vs Peso al Servicio</h3>
-                        <p className="text-xs font-medium text-slate-400 max-w-[200px] text-right">Análisis post-mortem cruce Ficha/Eventos.</p>
+                        <p className="text-xs font-medium text-slate-400 max-w-[200px] text-right">Análisis retrospectivo cruzando Ficha y Eventos.</p>
                     </div>
 
                     <div className="h-72 w-full">
@@ -151,13 +151,15 @@ export default function ReproductiveForecast() {
                                     tick={{ fontSize: 12, fill: '#94a3b8' }}
                                     stroke="#cbd5e1"
                                 />
-                                {/* Dummy Y Axis to space the dots vertically by successful / failed pregnancy */}
+                                {/* Y Axis uses numbers for jitter / bee-swarm effect */}
                                 <YAxis
-                                    type="category"
-                                    dataKey="preñada"
+                                    type="number"
+                                    dataKey="yPos"
                                     name="Resultado"
-                                    tickFormatter={(v) => v ? 'Preñada' : 'Vacía'}
-                                    tick={{ fontSize: 12, fill: '#64748b', fontWeight: 600 }}
+                                    domain={[-0.5, 1.5]}
+                                    ticks={[0, 1]}
+                                    tickFormatter={(v) => v === 1 ? 'Preñada' : 'Vacía'}
+                                    tick={{ fontSize: 13, fill: '#64748b', fontWeight: 600 }}
                                     width={80}
                                     stroke="transparent"
                                 />
@@ -165,9 +167,9 @@ export default function ReproductiveForecast() {
 
                                 <ReferenceLine x={targetWeight} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'top', value: 'Objetivo de Peso', fill: '#10b981', fontSize: 12 }} />
 
-                                <Scatter name="Rodeo" data={forecast.scatterData}>
+                                <Scatter name="Rodeo" data={forecast.scatterData.map(d => ({ ...d, yPos: (d.preñada ? 1 : 0) + (Math.random() * 0.3 - 0.15) }))}>
                                     {forecast.scatterData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.preñada ? '#10b981' : '#f43f5e'} fillOpacity={0.7} />
+                                        <Cell key={`cell-${index}`} fill={entry.preñada ? '#10b981' : '#f43f5e'} fillOpacity={0.6} />
                                     ))}
                                 </Scatter>
                             </ScatterChart>

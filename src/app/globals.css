@@ -135,6 +135,26 @@
   .glass {
     @apply bg-card/70 backdrop-blur-xl border border-border/80 shadow-md;
   }
+
+  /* Tabular numeric rendering: ensures digit widths are uniform in tables */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Overflow-safe column for long IDs or text - hides overflow with ellipsis */
+  .col-truncate {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Force table to allow fixed layout so column widths are respected */
+  .table-fixed-layout {
+    table-layout: fixed;
+    width: 100%;
+  }
 }
 
 @layer base {

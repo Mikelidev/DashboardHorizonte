@@ -217,34 +217,50 @@ export default function AnimalProfile({ onViewChange }: AnimalProfileProps = {})
             {activeAnimal && (
                 <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
 
-                    {/* Header Scorecards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="glass rounded-2xl p-5 border border-slate-200/60 flex flex-col justify-between">
-                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Identidad & Genética</span>
-                            <div>
-                                <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">{activeAnimal.ide}</h3>
-                                <p className="text-sm font-medium text-slate-500 flex items-center gap-1 mt-1">
-                                    <Dna className="w-3 h-3" /> Padre: {activeAnimal.padre}
+                    {/* Header Scorecards - responsive 1→2→5 cols */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
+                        {/* Card 1: Identidad */}
+                        <div className="glass rounded-2xl p-4 border border-slate-200/60 flex flex-col justify-between min-w-0">
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 truncate">Identidad & Genética</span>
+                            <div className="min-w-0">
+                                <h3 className="text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight truncate" title={activeAnimal.ide}>{activeAnimal.ide}</h3>
+                                <p className="text-sm font-medium text-slate-500 flex items-center gap-1 mt-1 truncate">
+                                    <Dna className="w-3 h-3 shrink-0" /> <span className="truncate">Padre: {activeAnimal.padre}</span>
                                 </p>
                             </div>
                         </div>
 
-                        <div className="glass rounded-2xl p-5 border border-slate-200/60 flex flex-col justify-between">
-                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+                        {/* Card 2: Peso Actual */}
+                        <div className="glass rounded-2xl p-4 border border-slate-200/60 flex flex-col justify-between min-w-0">
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Peso Actual</span>
+                            <div>
+                                <h3 className="text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight">
+                                    {activeAnimal.currentWeight ?? 'N/A'} <span className="text-sm font-semibold text-slate-500">kg</span>
+                                </h3>
+                                <p className="text-sm font-medium text-slate-500 flex items-center gap-1 mt-1">
+                                    <Calendar className="w-3 h-3" /> Última Pesada
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Card 3: GDM */}
+                        <div className="glass rounded-2xl p-4 border border-slate-200/60 flex flex-col justify-between min-w-0">
+                            <span className="text-xs font-semibold uppercase tracking-wider mb-2 flex justify-between items-center text-slate-400">
                                 Termodinámica (GDM)
-                                {activeAnimal.alertRed && <AlertTriangle className="w-4 h-4 text-rose-500" />}
+                                {activeAnimal.alertRed && <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />}
                             </span>
                             <div>
-                                <h3 className={`text-3xl font-extrabold tracking-tight ${activeAnimal.currentGdm !== null && activeAnimal.currentGdm < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                <h3 className={`text-2xl lg:text-3xl font-extrabold tracking-tight tabular-nums ${activeAnimal.currentGdm !== null && activeAnimal.currentGdm < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                                     {activeAnimal.currentGdm !== null ? `${activeAnimal.currentGdm > 0 ? '+' : ''}${activeAnimal.currentGdm.toFixed(3)}` : 'N/A'} <span className="text-sm font-semibold opacity-70">kg/d</span>
                                 </h3>
                                 <p className="text-sm font-medium text-slate-500 flex items-center gap-1 mt-1">
-                                    <Scale className="w-3 h-3" /> Peso Actual: {activeAnimal.currentWeight ?? 'N/A'} kg
+                                    <Activity className="w-3 h-3" /> Eficiencia Metabólica
                                 </p>
                             </div>
                         </div>
 
-                        <div className={`rounded-2xl p-5 border flex flex-col justify-between ${activeAnimal.reproductiveState?.toUpperCase().includes('PREÑADA') ? 'bg-emerald-50 border-emerald-200/60' :
+                        {/* Card 4: Estado Reproductivo */}
+                        <div className={`rounded-2xl p-4 border flex flex-col justify-between min-w-0 ${activeAnimal.reproductiveState?.toUpperCase().includes('PREÑADA') ? 'bg-emerald-50 border-emerald-200/60' :
                             activeAnimal.reproductiveState?.toUpperCase().includes('ANESTRO') ? 'bg-rose-50 border-rose-200/60' :
                                 'glass border-slate-200/60'
                             }`}>
@@ -252,22 +268,23 @@ export default function AnimalProfile({ onViewChange }: AnimalProfileProps = {})
                                 Estado Reproductivo
                             </span>
                             <div>
-                                <h3 className={`text-2xl font-extrabold tracking-tight ${activeAnimal.reproductiveState?.toUpperCase().includes('PREÑADA') ? 'text-emerald-700' :
+                                <h3 className={`text-xl lg:text-2xl font-extrabold tracking-tight truncate ${activeAnimal.reproductiveState?.toUpperCase().includes('PREÑADA') ? 'text-emerald-700' :
                                     activeAnimal.reproductiveState?.toUpperCase().includes('ANESTRO') ? 'text-rose-700' :
                                         'text-slate-800'
                                     }`}>
                                     {activeAnimal.reproductiveState || 'Sin Tacto o Vacía'}
                                 </h3>
-                                <p className="text-sm font-medium opacity-70 flex items-center gap-1 mt-1">
-                                    <HeartPulse className="w-3 h-3" /> {activeAnimal.masterServiceType ? `Servicio: ${activeAnimal.masterServiceType}` : 'No Evaluada'}
+                                <p className="text-sm font-medium opacity-70 flex items-center gap-1 mt-1 truncate">
+                                    <HeartPulse className="w-3 h-3 shrink-0" /> {activeAnimal.masterServiceType ? `Servicio: ${activeAnimal.masterServiceType}` : 'No Evaluada'}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="glass rounded-2xl p-5 border border-slate-200/60 flex flex-col justify-between relative overflow-hidden">
+                        {/* Card 5: Score */}
+                        <div className="glass rounded-2xl p-4 border border-slate-200/60 flex flex-col justify-between relative overflow-hidden min-w-0">
                             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Score Horizon / PDE</span>
                             <div className="z-10 relative">
-                                <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight">
+                                <h3 className="text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight tabular-nums">
                                     {activeAnimal.scoreTotal} <span className="text-sm font-semibold text-slate-500">/ 100 pt</span>
                                 </h3>
                                 <p className="text-sm font-medium text-slate-500 flex items-center gap-1 mt-1">

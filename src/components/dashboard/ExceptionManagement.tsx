@@ -172,16 +172,16 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
                                 <tbody className="divide-y text-sm divide-rose-50">
                                     {alerts.criticalCows
                                         .filter(c => redAlertFilter === 'Todas' || c.alertReason === redAlertFilter)
-                                        .map(ano => (
-                                            <tr key={ano.ide} className="hover:bg-rose-50/50 transition-colors group">
+                                        .map((ano, idx) => (
+                                            <tr key={ano.ide} className={`hover:bg-rose-50/60 transition-colors group ${idx % 2 === 0 ? 'bg-white' : 'bg-rose-50/20'}`}>
                                                 <td 
-                                                    className="py-3 px-5 font-mono font-bold text-rose-600 whitespace-nowrap cursor-pointer group-hover:underline"
+                                                    className="py-3 px-5 font-mono font-bold text-rose-600 max-w-[200px] cursor-pointer group-hover:underline"
                                                     onClick={() => {
                                                         setActiveProfileIde(ano.ide);
                                                         if (onViewChange) onViewChange('profile');
                                                     }}
                                                 >
-                                                    {ano.ide}
+                                                    <span className="block truncate" title={ano.ide}>{ano.ide}</span>
                                                 </td>
                                                 <td className="py-3 px-5 text-slate-700">{ano.alertReason}</td>
                                             </tr>
@@ -230,16 +230,16 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
                                 <tbody className="divide-y text-sm divide-amber-50">
                                     {alerts.delayedCows
                                         .filter(c => yellowAlertFilter === 'Todas' || c.alertReason === yellowAlertFilter)
-                                        .map(ano => (
-                                        <tr key={ano.ide} className="hover:bg-amber-50/50 transition-colors group">
+                                        .map((ano, idx) => (
+                                        <tr key={ano.ide} className={`hover:bg-amber-50/60 transition-colors group ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/20'}`}>
                                             <td 
-                                                className="py-3 px-5 font-mono font-bold text-amber-600 whitespace-nowrap cursor-pointer group-hover:underline"
+                                                className="py-3 px-5 font-mono font-bold text-amber-600 max-w-[200px] cursor-pointer group-hover:underline"
                                                 onClick={() => {
                                                     setActiveProfileIde(ano.ide);
                                                     if (onViewChange) onViewChange('profile');
                                                 }}
                                             >
-                                                {ano.ide}
+                                                <span className="block truncate" title={ano.ide}>{ano.ide}</span>
                                             </td>
                                             <td className="py-3 px-5 text-slate-700">{ano.alertReason}</td>
                                         </tr>

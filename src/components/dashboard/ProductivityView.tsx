@@ -161,7 +161,13 @@ export default function ProductivityView() {
                                     stroke="#94a3b8"
                                     fontSize={12}
                                 />
-                                <YAxis hide />
+                                <YAxis
+                                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickFormatter={(v) => `${(v * 1000).toFixed(1)}`}
+                                    width={36}
+                                />
                                 <Tooltip
                                     formatter={(value: any) => [(value * 100).toFixed(4), 'Densidad Relativa']}
                                     labelFormatter={(label) => `Peso: ${label} kg`}
