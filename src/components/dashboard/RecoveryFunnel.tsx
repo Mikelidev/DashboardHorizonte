@@ -153,7 +153,7 @@ export default function RecoveryFunnel({ onViewChange }: FunnelProps = {}) {
                     No hay suficientes datos secuenciales para analizar la evolución en este período específico.
                 </div>
             ) : (
-                <div className="relative pt-4 pb-8 px-4 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 overflow-hidden">
+                <div className="relative pt-4 pb-8 px-4 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
 
                     {/* LEFT BUBBLE (Initial Anestro) */}
                     <div className="flex-1 w-full bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center relative group">
@@ -188,7 +188,7 @@ export default function RecoveryFunnel({ onViewChange }: FunnelProps = {}) {
                     </div>
 
                     {/* TRANSITIONS (Arrows) */}
-                    <div className="flex flex-row md:flex-col items-center justify-center gap-4">
+                    <div className="flex flex-row md:flex-col items-center justify-center gap-4 z-30 relative">
                         <button
                             onClick={() => handleOpenDetails('RECOVERED')}
                             className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 cursor-pointer hover:bg-emerald-100 hover:scale-105 transition-all group relative"
@@ -196,9 +196,10 @@ export default function RecoveryFunnel({ onViewChange }: FunnelProps = {}) {
                             <span className="font-bold">{stats.recoveredCount} Recuperadas</span>
                             <ArrowRight className="w-5 h-5 hidden md:block" />
 
-                            <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 hidden group-hover:block w-56">
-                                <div className="bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl text-center">
-                                    <strong>{stats.recoveredCount} vaquillonas</strong> pasaron de Anestro a Ciclando/Preñada ({stats.recoveryRate.toFixed(1)}% de efectividad de tratamiento).
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 hidden group-hover:block w-64 pointer-events-none">
+                                <div className="bg-slate-900/95 text-white text-xs p-3 rounded-xl shadow-2xl text-center backdrop-blur-sm border border-white/10">
+                                    <div className="font-bold mb-1 text-emerald-400">{stats.recoveredCount} Recuperadas</div>
+                                    Vaquillonas que pasaron de Anestro a Ciclando/Preñada ({stats.recoveryRate.toFixed(1)}% efectividad).
                                 </div>
                             </div>
                         </button>
@@ -209,6 +210,13 @@ export default function RecoveryFunnel({ onViewChange }: FunnelProps = {}) {
                         >
                             <ArrowLeft className="w-5 h-5 hidden md:block" />
                             <span className="font-bold">{stats.lostCount} Caídas</span>
+
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 hidden group-hover:block w-64 pointer-events-none">
+                                <div className="bg-slate-900/95 text-white text-xs p-3 rounded-xl shadow-2xl text-center backdrop-blur-sm border border-white/10">
+                                    <div className="font-bold mb-1 text-rose-400">{stats.lostCount} Caídas</div>
+                                    Vaquillonas que estaban saludables y retrocedieron a Anestro o Vacía.
+                                </div>
+                            </div>
                         </button>
                     </div>
 

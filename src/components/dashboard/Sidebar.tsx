@@ -4,6 +4,8 @@ import React from 'react';
 import { Home, Activity, Dna, Settings, List, HeartPulse, Target, AlertTriangle, ClipboardList, GitCompare } from 'lucide-react';
 import clsx from 'clsx';
 
+import Image from 'next/image';
+
 interface SidebarProps {
     currentView: string;
     setCurrentView: (view: string) => void;
@@ -40,11 +42,15 @@ export default function Sidebar({ currentView, setCurrentView }: SidebarProps) {
 
     return (
         <aside className="w-64 glass flex flex-col z-10 transition-all border-r border-slate-200/50">
-            <div className="p-8 flex items-center gap-3 border-b border-slate-200/50">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-bold text-xl text-white shadow-md shadow-emerald-500/20">
-                    H
-                </div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-800">Horizonte<span className="text-emerald-500">Ag</span></h1>
+            <div className="p-8 pb-4 flex items-center justify-center border-b border-slate-200/50">
+                <Image
+                    src="/logo-horizonte-expanded.png"
+                    alt="Horizonte Logo"
+                    width={220}
+                    height={80}
+                    className="object-contain"
+                    priority
+                />
             </div>
 
             <nav className="flex-1 py-8 flex flex-col gap-6 px-4 overflow-y-auto custom-scrollbar">
