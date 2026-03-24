@@ -359,30 +359,49 @@ export function calculateReproductiveForecast(
         if (projectedWeight >= targetWeight) {
             metrics.projectedReady++;
         } else {
-            // El animal no llega al peso objetivo con su GDM actual.
-            // Calculamos cuánto GDM NECESITA para llegar.
+            // El animal no llega al peso objetivo con su GDM actual o ya pasó la fecha.
             let neededGdm = Infinity;
             
             if (daysUntilIatf > 0) {
+                // Future IATF: Calculate required GDM to reach target
                 const kgsNeeded = targetWeight - an.currentWeight;
                 neededGdm = kgsNeeded / daysUntilIatf;
-            }
-
-            // Nueva regla: Retraso severo (Danger) solo si necesita más de 1.5kg/día
-            if (neededGdm > 1.5) {
-                metrics.projectedDanger++;
-                metrics.dangerList.push({ 
-                    ide: an.ide, 
-                    currentWeight: an.currentWeight, 
-                    neededGdm: neededGdm === Infinity ? 'Inalcanzable' : neededGdm.toFixed(2) 
-                });
+                
+                if (neededGdm > 1.5) {
+                    metrics.projectedDanger++;
+                    metrics.dangerList.push({ 
+                        ide: an.ide, 
+                        currentWeight: an.currentWeight, 
+                        neededGdm: neededGdm.toFixed(2) 
+                    });
+                } else {
+                    metrics.projectedDelayed++;
+                    metrics.delayedList.push({ 
+                        ide: an.ide, 
+                        currentWeight: an.currentWeight, 
+                        neededGdm: neededGdm.toFixed(2) 
+                    });
+                }
             } else {
-                metrics.projectedDelayed++;
-                metrics.delayedList.push({ 
-                    ide: an.ide, 
-                    currentWeight: an.currentWeight, 
-                    neededGdm: neededGdm.toFixed(2) 
-                });
+                // Past IATF: They simply didn't reach the target weight.
+                // We categorize them based on how far off they were.
+                const kgsShort = targetWeight - projectedWeight;
+                // Heuristic: If they missed by more than 20kg, consider it Severe. Otherwise Moderate.
+                if (kgsShort > 20) {
+                    metrics.projectedDanger++;
+                    metrics.dangerList.push({ 
+                        ide: an.ide, 
+                        currentWeight: projectedWeight, 
+                        neededGdm: 'Falló' 
+                    });
+                } else {
+                    metrics.projectedDelayed++;
+                    metrics.delayedList.push({ 
+                        ide: an.ide, 
+                        currentWeight: projectedWeight, 
+                        neededGdm: 'Falló' 
+                    });
+                }
             }
         }
 
