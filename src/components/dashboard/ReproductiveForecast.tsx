@@ -1,12 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { useDashboard } from './DashboardContext';
 import { calculateReproductiveForecast } from '@/lib/analytics-engine';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, ReferenceLine } from 'recharts';
-import { Target, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Target, AlertTriangle, Info, ZoomOut, MousePointer2, Move } from 'lucide-react';
 
 export default function ReproductiveForecast() {
     const { animals, settings, selectedSnapshot, availableSnapshots } = useDashboard();
+    
+    // Advanced Zoom & Pan State
+    const [xDomain, setXDomain] = useState<[number | 'dataMin', number | 'dataMax']>(['dataMin', 'dataMax']);
+    const [isPanning, setIsPanning] = useState(false);
+    const lastMouseMoveValue = useRef<number | null>(null);
 
     const activeSnapshotDate = useMemo(() => {
         return availableSnapshots.find(s => s.id === selectedSnapshot)?.date || null;
@@ -21,6 +26,16 @@ export default function ReproductiveForecast() {
         );
     }, [animals, settings, activeSnapshotDate]);
 
+    // Calculate initial data range for reset and bounds
+    const dataRange = useMemo(() => {
+        if (forecast.scatterData.length === 0) return { min: 200, max: 500 };
+        const weights = forecast.scatterData.map(d => d.weight);
+        return {
+            min: Math.min(...weights) - 20,
+            max: Math.max(...weights) + 20
+        };
+    }, [forecast.scatterData]);
+
     if (!settings.iatfWindowStart) {
         return (
             <div className="glass rounded-2xl p-8 border border-slate-200/50 flex flex-col items-center justify-center text-slate-500">
@@ -34,13 +49,70 @@ export default function ReproductiveForecast() {
     const { targetWeight } = settings;
     const readyRate = forecast.totalEligible > 0 ? (forecast.projectedReady / forecast.totalEligible) * 100 : 0;
 
-    // Formatting data for Scatter Plot tooltip
+    // --- Interactive Logic ---
+
+    const handleWheel = (e: React.WheelEvent) => {
+        // Prevent page scroll when zooming the chart
+        if (e.ctrlKey || true) { // Always zoom on wheel for this chart as requested
+            const zoomIn = e.deltaY < 0;
+            const zoomFactor = zoomIn ? 0.85 : 1.15;
+            
+            const currentX = lastMouseMoveValue.current;
+            if (currentX === null) return;
+
+            const [currMin, currMax] = xDomain[0] === 'dataMin' 
+                ? [dataRange.min, dataRange.max] 
+                : [xDomain[0] as number, xDomain[1] as number];
+
+            const newRange = (currMax - currMin) * zoomFactor;
+            
+            // Limit zoom levels
+            if (newRange < 5 && zoomIn) return;
+            if (newRange > (dataRange.max - dataRange.min) * 5 && !zoomIn) return;
+
+            // Calculate new boundaries centered on mouse
+            const ratio = (currentX - currMin) / (currMax - currMin);
+            const newMin = currentX - (newRange * ratio);
+            const newMax = newMin + newRange;
+
+            setXDomain([newMin, newMax]);
+        }
+    };
+
+    const handleMouseDown = useCallback((e: any) => {
+        if (e && e.xValue) {
+            setIsPanning(true);
+            lastMouseMoveValue.current = e.xValue;
+        }
+    }, []);
+
+    const handleMouseMove = useCallback((e: any) => {
+        if (!e || e.xValue === undefined) return;
+        
+        const currentX = e.xValue;
+        
+        if (isPanning && lastMouseMoveValue.current !== null) {
+            const dx = lastMouseMoveValue.current - currentX;
+            setXDomain(prev => {
+                const [currMin, currMax] = prev[0] === 'dataMin'
+                    ? [dataRange.min, dataRange.max]
+                    : [prev[0] as number, prev[1] as number];
+                return [currMin + dx, currMax + dx];
+            });
+        }
+        
+        lastMouseMoveValue.current = currentX;
+    }, [isPanning, dataRange]);
+
+    const handleMouseUp = () => setIsPanning(false);
+    const handleDoubleClick = () => setXDomain(['dataMin', 'dataMax']);
+
     const renderTooltip = (props: any) => {
         const { active, payload } = props;
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (
-                <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100">
+                <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100 pointer-events-none">
                     <p className="font-bold text-slate-800 mb-1">IDE: {data.ide}</p>
                     <p className="text-sm text-slate-600">Peso al Servicio: <span className="font-bold">{data.weight} kg</span></p>
                     <p className="text-sm text-slate-600">GDM Contemporáneo: <span className="font-bold">{data.gdm} kg/d</span></p>
@@ -71,14 +143,13 @@ export default function ReproductiveForecast() {
                     <p className="text-xs font-semibold text-slate-500 mb-1">Rodeo Apto Proyectado</p>
                     <div className="flex items-end gap-2">
                         <h3 className="text-3xl font-extrabold text-emerald-600">{forecast.projectedReady}</h3>
-                        <span className="text-sm text-slate-400 mb-1 mb-1.5">cabezas</span>
+                        <span className="text-sm text-slate-400 mb-1">cabezas</span>
                     </div>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-5 border border-slate-200/50">
                     <p className="text-xs font-semibold text-slate-500 mb-1">Dosis Semen Sugeridas</p>
                     <div className="flex items-end gap-2">
-                        {/* Always buy +10% doses relative to the perfectly ready herd */}
                         <h3 className="text-3xl font-extrabold text-blue-600">{Math.ceil(forecast.projectedReady * 1.1)}</h3>
                         <span className="text-sm text-slate-400 mb-1.5 flex items-center gap-1 cursor-help" title="Calculado sumando un 10% de margen de seguridad sobre el rodeo proyectado como Apto."><Info className="w-3 h-3" /> dosis</span>
                     </div>
@@ -102,7 +173,6 @@ export default function ReproductiveForecast() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Progress/Readiness Bar */}
                 <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="glass rounded-2xl p-6 border border-slate-200/50 flex flex-col justify-center">
                     <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
                         <Target className="w-5 h-5 text-emerald-500" />
@@ -110,7 +180,6 @@ export default function ReproductiveForecast() {
                     </h3>
 
                     <div className="relative h-48 w-48 mx-auto">
-                        {/* Simple circular progress visualizing the % of herd arriving on time */}
                         <svg className="w-full h-full transform -rotate-90">
                             <circle cx="96" cy="96" r="88" fill="none" stroke="#f1f5f9" strokeWidth="16" />
                             <circle
@@ -131,27 +200,59 @@ export default function ReproductiveForecast() {
                     <p className="text-sm text-center text-slate-500 mt-6">Basado en la Velocidad de Caja (GDM) individual actualizando diáriamente la proyección hasta la fecha IATF.</p>
                 </motion.div>
 
-                {/* Scatter Plot */}
-                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }} className="glass rounded-2xl p-6 border border-slate-200/50 lg:col-span-2">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-slate-800">Tasa de Preñez Empírica vs Peso al Servicio</h3>
-                        <p className="text-xs font-medium text-slate-400 max-w-[200px] text-right">Análisis retrospectivo cruzando Ficha y Eventos.</p>
+                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }} className="glass rounded-2xl p-6 border border-slate-200/50 lg:col-span-2 relative overflow-hidden">
+                    <div className="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                Tasa de Preñez Empírica vs Peso al Servicio
+                            </h3>
+                            <p className="text-xs font-medium text-slate-400 mt-0.5 flex items-center gap-3">
+                                <span className="flex items-center gap-1"><MousePointer2 className="w-3 h-3" /> Scroll: Zoom</span>
+                                <span className="flex items-center gap-1"><Move className="w-3 h-3" /> Drag: Pan</span>
+                                <span className="flex items-center gap-1">Double Click: Reset</span>
+                            </p>
+                        </div>
+                        
+                        <AnimatePresence>
+                            {xDomain[0] !== 'dataMin' && (
+                                <motion.button
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    onClick={handleDoubleClick}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-xs font-bold transition-colors shadow-sm"
+                                >
+                                    <ZoomOut className="w-3.5 h-3.5" />
+                                    Restablecer
+                                </motion.button>
+                            )}
+                        </AnimatePresence>
                     </div>
 
-                    <div className="h-72 w-full">
+                    <div 
+                        className={`h-72 w-full select-none ${isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+                        onWheel={handleWheel}
+                    >
                         <ResponsiveContainer width="100%" height="100%">
-                            <ScatterChart margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+                            <ScatterChart 
+                                margin={{ top: 35, right: 30, left: -20, bottom: 0 }}
+                                onMouseDown={handleMouseDown}
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={handleMouseUp}
+                                onMouseLeave={handleMouseUp}
+                                onDoubleClick={handleDoubleClick}
+                            >
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                 <XAxis
                                     type="number"
                                     dataKey="weight"
                                     name="Peso"
                                     unit="kg"
-                                    domain={['dataMin - 20', 'dataMax + 20']}
+                                    domain={xDomain}
                                     tick={{ fontSize: 12, fill: '#94a3b8' }}
                                     stroke="#cbd5e1"
+                                    allowDataOverflow={true}
                                 />
-                                {/* Y Axis uses numbers for jitter / bee-swarm effect */}
                                 <YAxis
                                     type="number"
                                     dataKey="yPos"
@@ -165,9 +266,26 @@ export default function ReproductiveForecast() {
                                 />
                                 <Tooltip content={renderTooltip} cursor={{ strokeDasharray: '3 3' }} />
 
-                                <ReferenceLine x={targetWeight} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'top', value: 'Objetivo de Peso', fill: '#10b981', fontSize: 12 }} />
+                                <ReferenceLine 
+                                    x={targetWeight} 
+                                    stroke="#10b981" 
+                                    strokeDasharray="4 4" 
+                                    strokeWidth={2}
+                                    label={{ 
+                                        position: 'top', 
+                                        value: 'OBJETIVO DE PESO', 
+                                        fill: '#059669', 
+                                        fontSize: 10,
+                                        fontWeight: 'bold',
+                                        offset: 15
+                                    }} 
+                                />
 
-                                <Scatter name="Rodeo" data={forecast.scatterData.map(d => ({ ...d, yPos: (d.preñada ? 1 : 0) + (Math.random() * 0.3 - 0.15) }))}>
+                                <Scatter 
+                                    name="Rodeo" 
+                                    data={forecast.scatterData.map(d => ({ ...d, yPos: (d.preñada ? 1 : 0) + (Math.random() * 0.3 - 0.15) }))}
+                                    isAnimationActive={false} // Disable animation for smoother panning/zooming
+                                >
                                     {forecast.scatterData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.preñada ? '#10b981' : '#f43f5e'} fillOpacity={0.6} />
                                     ))}

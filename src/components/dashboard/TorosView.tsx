@@ -132,6 +132,7 @@ function BullWeightEvolutionChart({
                             tickLine={false}
                             tickFormatter={(v: number) => `${v}kg`}
                             width={52}
+                            domain={[255, 350]}
                         />
                         <RechartsTooltip
                             contentStyle={{
