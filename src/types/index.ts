@@ -91,4 +91,5 @@ export interface DashboardData {
   animals: ProcessedAnimal[];
   availableSnapshots: SnapshotDate[];
   anomalies: DataAnomaly[];
+  dataMaxDate: Date | null;
 }

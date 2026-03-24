@@ -98,6 +98,45 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
         ));
     };
 
+    const handleExportBottom20 = () => {
+        if (sortedBottom20.length === 0) return;
+
+        const headers = ['IDE', 'Estado Reproductivo', 'GDM (kg/d)', 'PDE (kg/d)', 'Score Total', 'Categoria'];
+        const rows = sortedBottom20.map(cow => [
+            cow.ide,
+            cow.reproductiveState || 'Sin Tacto',
+            cow.currentGdm?.toFixed(3) || '',
+            cow.pde?.toFixed(3) || '',
+            cow.scoreTotal,
+            cow.scoreCategory || ''
+        ]);
+
+        const tableHtml = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head><meta charset="UTF-8"></head>
+            <body>
+                <table border="1">
+                    <thead>
+                        <tr>${headers.map(h => `<th style="background-color: #f87171; color: white; font-weight: bold;">${h}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Descarte_Bottom20_${new Date().toISOString().split('T')[0]}.xls`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             {/* Top 20 Best */}
@@ -136,7 +175,10 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
                         Bottom 20 (Peores)
                     </h3>
                     <div className="flex flex-wrap items-center gap-3">
-                        <button className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                        <button 
+                            onClick={handleExportBottom20}
+                            className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm"
+                        >
                             <ArrowDown className="w-3.5 h-3.5" />
                             Exportar Lista de Descarte
                         </button>

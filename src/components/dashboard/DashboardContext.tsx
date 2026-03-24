@@ -20,6 +20,7 @@ interface DashboardContextProps {
     setActiveSireId: (id: string | null) => void;
     inventoryOverrides: Record<string, 'active' | 'archived'>;
     setInventoryOverride: (ide: string, status: 'active' | 'archived') => void;
+    dataMaxDate: Date | null;
 }
 
 const defaultSettings: ThresholdSettings = {
@@ -42,6 +43,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
     const [activeProfileIde, setActiveProfileIde] = useState<string | null>(null);
     const [activeSireId, setActiveSireId] = useState<string | null>(null);
     const [inventoryOverrides, setInventoryOverridesState] = useState<Record<string, 'active' | 'archived'>>({});
+    const [dataMaxDate, setDataMaxDate] = useState<Date | null>(null);
 
     const [rawAnimales, setRawAnimales] = useState<string | null>(null);
     const [rawEventos, setRawEventos] = useState<string | null>(null);
@@ -96,6 +98,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
 
                 setAnimals(dashboardData.animals);
                 setAnomalies(dashboardData.anomalies);
+                setDataMaxDate(dashboardData.dataMaxDate);
 
                 if (availableSnapshots.length === 0 && dashboardData.availableSnapshots.length > 0) {
                     setAvailableSnapshots(dashboardData.availableSnapshots);
@@ -114,7 +117,7 @@ export const DashboardProvider = ({ children }: { children: React.ReactNode }) =
             settings, setSettings, animals, availableSnapshots,
             selectedSnapshot, setSelectedSnapshot, anomalies, loadDataFiles, isLoading,
             activeProfileIde, setActiveProfileIde, activeSireId, setActiveSireId,
-            inventoryOverrides, setInventoryOverride
+            inventoryOverrides, setInventoryOverride, dataMaxDate
         }}>
             {children}
         </DashboardContext.Provider>

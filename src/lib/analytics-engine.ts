@@ -140,6 +140,13 @@ export interface EvolutionMetrics {
         asToPrenada: number;
         apToPrenada: number;
         ciclandoToAnestro: number;
+        asToCiclando: number;
+        apToCiclando: number;
+        asToPrenada_list: EvolutionTransition[];
+        apToPrenada_list: EvolutionTransition[];
+        ciclandoToAnestro_list: EvolutionTransition[];
+        asToCiclando_list: EvolutionTransition[];
+        apToCiclando_list: EvolutionTransition[];
     };
 }
 
@@ -204,7 +211,7 @@ export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: Evolut
         recoveryRate: 0,
         initialDetails: { as: 0, ap: 0, noApta: 0, ciclando: 0, prenadas: 0 },
         details: { recovered: [], lost: [], maintainedGood: [], maintainedBad: [] },
-        specificTransitions: { asToPrenada: 0, apToPrenada: 0, ciclandoToAnestro: 0 }
+        specificTransitions: { asToPrenada: 0, apToPrenada: 0, ciclandoToAnestro: 0, asToCiclando: 0, apToCiclando: 0, asToPrenada_list: [], apToPrenada_list: [], ciclandoToAnestro_list: [], asToCiclando_list: [], apToCiclando_list: [] }
     };
 
     for (const an of animals) {
@@ -241,10 +248,22 @@ export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: Evolut
                 // Specific Check: AS -> Preñada
                 if ((rawStart === 'AS' || rawStart.includes('SUPERFICIAL')) && (rawEnd.includes('PRENADA') || rawEnd.includes('PREÑADA'))) {
                     metrics.specificTransitions.asToPrenada++;
+                    metrics.specificTransitions.asToPrenada_list.push(trans);
                 }
                 // Specific Check: AP -> Preñada
                 if ((rawStart === 'AP' || rawStart.includes('PROFUNDO')) && (rawEnd.includes('PRENADA') || rawEnd.includes('PREÑADA'))) {
                     metrics.specificTransitions.apToPrenada++;
+                    metrics.specificTransitions.apToPrenada_list.push(trans);
+                }
+                // Specific Check: AS -> Ciclando
+                if ((rawStart === 'AS' || rawStart.includes('SUPERFICIAL')) && rawEnd.includes('CICLANDO')) {
+                    metrics.specificTransitions.asToCiclando++;
+                    metrics.specificTransitions.asToCiclando_list.push(trans);
+                }
+                // Specific Check: AP -> Ciclando
+                if ((rawStart === 'AP' || rawStart.includes('PROFUNDO')) && rawEnd.includes('CICLANDO')) {
+                    metrics.specificTransitions.apToCiclando++;
+                    metrics.specificTransitions.apToCiclando_list.push(trans);
                 }
 
             }
@@ -255,6 +274,7 @@ export function calculateEvolution(animals: ProcessedAnimal[], fromPhase: Evolut
                 // Specific Check: Ciclando -> Anestro (AS/AP)
                 if (rawStart.includes('CICLANDO') && (rawEnd === 'AS' || rawEnd === 'AP' || rawEnd.includes('SUPERFICIAL') || rawEnd.includes('PROFUNDO'))) {
                     metrics.specificTransitions.ciclandoToAnestro++;
+                    metrics.specificTransitions.ciclandoToAnestro_list.push(trans);
                 }
 
             }

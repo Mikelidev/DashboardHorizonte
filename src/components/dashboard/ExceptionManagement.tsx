@@ -96,7 +96,7 @@ export default function ExceptionManagement({ onViewChange }: { onViewChange?: (
         const criticalCowsWithReason = criticalCows.map(ano => {
             let reason = 'Alerta Crítica Detectada';
             if (ano.currentGdm !== null && ano.currentGdm < 0) reason = 'GDM Negativo (Pérdida de Peso Histórica)';
-            else if (ano.currentGdm !== null && ano.currentGdm > 0 && ano.currentGdm < settings.gdmMin) reason = `GDM por debajo del mínimo permitido (< ${settings.gdmMin} kg/d)`;
+            else if (ano.currentGdm !== null && ano.currentGdm >= 0 && ano.currentGdm < settings.gdmMin) reason = `GDM por debajo del mínimo permitido (< ${settings.gdmMin} kg/d)`;
             else if (ano.reproductiveState?.toUpperCase().includes('ANESTRO') && ano.currentWeight !== null && ano.currentWeight >= settings.targetWeight) reason = 'En Anestro habiendo superado el peso objetivo';
             else if (ano.scoreCategory === 'DESCARTE') reason = 'Score Global Categoría Descarte';
             return { ...ano, alertReason: reason };

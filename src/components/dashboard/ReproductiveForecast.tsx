@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ReproductiveForecast() {
-    const { animals, settings, selectedSnapshot, availableSnapshots, setActiveProfileIde } = useDashboard();
+    const { animals, settings, selectedSnapshot, availableSnapshots, setActiveProfileIde, dataMaxDate } = useDashboard();
     
     // Advanced Zoom & Pan State
     const [xDomain, setXDomain] = useState<[number | 'dataMin', number | 'dataMax']>(['dataMin', 'dataMax']);
@@ -24,13 +24,29 @@ export default function ReproductiveForecast() {
     }, [availableSnapshots, selectedSnapshot]);
 
     const forecast = useMemo(() => {
+        // Use dataMaxDate as the "today" reference if we are in 'Actualidad'
+        const referenceDate = activeSnapshotDate || dataMaxDate;
         return calculateReproductiveForecast(
             animals,
             settings.iatfWindowStart,
             settings.targetWeight,
-            activeSnapshotDate
+            referenceDate
         );
-    }, [animals, settings, activeSnapshotDate]);
+    }, [animals, settings, activeSnapshotDate, dataMaxDate]);
+
+    const isPostService = useMemo(() => {
+        if (!settings.iatfWindowStart) return false;
+        const refDate = activeSnapshotDate || dataMaxDate || new Date();
+        const basePost = refDate.getTime() > settings.iatfWindowStart.getTime();
+
+        // Smart check: If the data already contains historical IATF results, 
+        // it's post-service even if the user hasn't updated the settings date to the current year.
+        const containsResults = animals.some(an => 
+            an.eventos.some(e => e.type.toUpperCase().includes('TACTO IATF') || e.type.toUpperCase().includes('SERVICIO'))
+        );
+        
+        return basePost || containsResults;
+    }, [settings.iatfWindowStart, activeSnapshotDate, dataMaxDate, animals]);
 
     // Calculate initial data range for reset and bounds
     const dataRange = useMemo(() => {
@@ -178,7 +194,7 @@ export default function ReproductiveForecast() {
             {/* Projection KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-5 border border-slate-200/50">
-                    <p className="text-xs font-semibold text-slate-500 mb-1">Rodeo Apto Proyectado</p>
+                    <p className="text-xs font-semibold text-slate-500 mb-1">{isPostService ? 'Rodeo Apto Final' : 'Rodeo Apto Proyectado'}</p>
                     <div className="flex items-end gap-2">
                         <h3 className="text-3xl font-extrabold text-emerald-600">{forecast.projectedReady}</h3>
                         <span className="text-sm text-slate-400 mb-1">cabezas</span>
@@ -188,7 +204,7 @@ export default function ReproductiveForecast() {
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-5 border border-slate-200/50">
                     <p className="text-xs font-semibold text-slate-500 mb-1">Dosis Semen Sugeridas</p>
                     <div className="flex items-end gap-2">
-                        <h3 className="text-3xl font-extrabold text-blue-600">{Math.ceil(forecast.projectedReady + forecast.projectedDelayed + (forecast.projectedDanger * 0.1))}</h3>
+                        <h3 className="text-3xl font-extrabold text-blue-600">{isPostService ? 0 : Math.ceil(forecast.projectedReady + forecast.projectedDelayed + (forecast.projectedDanger * 0.1))}</h3>
                         <span className="text-sm text-slate-400 mb-1.5 flex items-center gap-1 cursor-help" title="Calculado sumando el rodeo apto, el rodeo con retraso moderado y un 10% del rodeo con retraso severo."><Info className="w-3 h-3" /> dosis</span>
                     </div>
                 </motion.div>
@@ -201,7 +217,7 @@ export default function ReproductiveForecast() {
                     className="glass rounded-2xl p-5 border border-slate-200/50 cursor-pointer hover:border-amber-300 hover:shadow-md transition-all group"
                 >
                     <p className="text-xs font-semibold text-slate-500 mb-1 flex justify-between items-center">
-                        Rodeo con retraso moderado
+                        {isPostService ? 'No alcanzó (Moderado)' : 'Rodeo con retraso moderado'}
                         <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />
                     </p>
                     <div className="flex items-end gap-2">
@@ -218,7 +234,7 @@ export default function ReproductiveForecast() {
                     className="glass rounded-2xl p-5 border border-slate-200/50 bg-rose-50/30 cursor-pointer hover:border-rose-300 hover:shadow-md transition-all group"
                 >
                     <p className="text-xs font-semibold text-rose-500 mb-1 flex justify-between items-center">
-                        Rodeo con retraso severo
+                        {isPostService ? 'No alcanzó (Severo)' : 'Rodeo con retraso severo'}
                         <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-rose-500" />
                     </p>
                     <div className="flex items-end gap-2">
@@ -250,10 +266,14 @@ export default function ReproductiveForecast() {
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                             <span className="text-4xl font-black text-slate-800">{readyRate.toFixed(1)}%</span>
-                            <span className="text-xs font-medium text-slate-500 mt-1">Llegan al Objetivo</span>
+                            <span className="text-xs font-medium text-slate-500 mt-1">{isPostService ? 'Cumplieron Objetivo' : 'Llegan al Objetivo'}</span>
                         </div>
                     </div>
-                    <p className="text-sm text-center text-slate-500 mt-6">Basado en la Velocidad de Caja (GDM) individual actualizando diáriamente la proyección hasta la fecha IATF.</p>
+                    <p className="text-sm text-center text-slate-500 mt-6">
+                        {isPostService 
+                            ? 'Resultado histórico basado en el peso real al momento del servicio comparado con el objetivo.' 
+                            : 'Basado en la Velocidad de Caja (GDM) individual actualizando diáriamente la proyección hasta la fecha IATF.'}
+                    </p>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }} className="glass rounded-2xl p-6 border border-slate-200/50 lg:col-span-2 relative overflow-hidden">
@@ -305,6 +325,7 @@ export default function ReproductiveForecast() {
                                     name="Peso"
                                     unit="kg"
                                     domain={xDomain}
+                                    tickFormatter={(val) => Math.round(val).toString()}
                                     tick={{ fontSize: 12, fill: '#94a3b8' }}
                                     stroke="#cbd5e1"
                                     allowDataOverflow={true}

@@ -382,10 +382,10 @@ export function processDashboardData(
             // Check if the animal was present in the last global session
             const lastEventDate = chronoEvents[0].date.getTime();
 
-            // We consider the animal "missing" if its last event date is more than 60 days older than the globalMaxTime
-            // (Standard extensive cattle threshold, 60 days is safer than 30 for session gap)
-            const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
-            const isMissingFromLatestSession = (globalMaxTime - lastEventDate) > SIXTY_DAYS_MS;
+            // We consider the animal "missing" if its last event date is more than 30 days older than the globalMaxTime
+            // (Assuming sessions happen roughly every 30-45 days, 30 days is a good threshold for a "missing" session)
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const isMissingFromLatestSession = (globalMaxTime - lastEventDate) > THIRTY_DAYS_MS;
 
             if (isMissingFromLatestSession) {
                 inventoryStatus = 'unregistered';
@@ -610,12 +610,15 @@ export function processDashboardData(
         }
 
         // Traditional Yellow Alerts (Projecting past IATF Window)
-        // ONLY if they haven't reached the weight (daysToTarget > 0)
-        if (settings.iatfWindowStart && draft.daysToTarget !== null && draft.daysToTarget > 0) {
-            const projectedDate = new Date();
+        // ONLY if we haven't reached the IATF date yet (globalMaxTime < windowStart)
+        // AND if they haven't reached the weight (daysToTarget > 0)
+        const simulationsPastWindow = settings.iatfWindowStart && globalMaxTime > settings.iatfWindowStart.getTime();
+
+        if (settings.iatfWindowStart && !simulationsPastWindow && draft.daysToTarget !== null && draft.daysToTarget > 0) {
+            const projectedDate = new Date(globalMaxTime); // Project from the "simulated today"
             projectedDate.setDate(projectedDate.getDate() + draft.daysToTarget);
             
-            // Si la fecha en la que alcanzan el peso está DESPUÉS de cuando empieza el IATF, están retrasadas
+            // Si la fecha en la que alcanzan el peso está DESPUES de cuando empieza el IATF, están retrasadas
             if (projectedDate.getTime() > settings.iatfWindowStart.getTime()) {
                 if (!draft.alertRed) draft.alertYellow = true;
             }
@@ -626,6 +629,7 @@ export function processDashboardData(
     return {
         animals: draftAnimals,
         availableSnapshots: availableSnapshots,
-        anomalies: anomalies
+        anomalies: anomalies,
+        dataMaxDate: globalMaxTime > 0 ? new Date(globalMaxTime) : null
     };
 }
