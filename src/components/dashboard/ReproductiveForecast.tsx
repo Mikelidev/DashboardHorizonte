@@ -188,8 +188,8 @@ export default function ReproductiveForecast() {
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-5 border border-slate-200/50">
                     <p className="text-xs font-semibold text-slate-500 mb-1">Dosis Semen Sugeridas</p>
                     <div className="flex items-end gap-2">
-                        <h3 className="text-3xl font-extrabold text-blue-600">{Math.ceil(forecast.projectedReady * 1.1)}</h3>
-                        <span className="text-sm text-slate-400 mb-1.5 flex items-center gap-1 cursor-help" title="Calculado sumando un 10% de margen de seguridad sobre el rodeo proyectado como Apto."><Info className="w-3 h-3" /> dosis</span>
+                        <h3 className="text-3xl font-extrabold text-blue-600">{Math.ceil(forecast.projectedReady + forecast.projectedDelayed + (forecast.projectedDanger * 0.1))}</h3>
+                        <span className="text-sm text-slate-400 mb-1.5 flex items-center gap-1 cursor-help" title="Calculado sumando el rodeo apto, el rodeo con retraso moderado y un 10% del rodeo con retraso severo."><Info className="w-3 h-3" /> dosis</span>
                     </div>
                 </motion.div>
 
