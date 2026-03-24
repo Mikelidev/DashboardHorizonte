@@ -166,7 +166,7 @@ export default function ReproductiveForecast() {
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass rounded-2xl p-5 border border-slate-200/50">
-                    <p className="text-xs font-semibold text-slate-500 mb-1">Rodeo Retrasado Salvable</p>
+                    <p className="text-xs font-semibold text-slate-500 mb-1">Rodeo con retraso moderado</p>
                     <div className="flex items-end gap-2">
                         <h3 className="text-3xl font-extrabold text-amber-500">{forecast.projectedDelayed}</h3>
                         <span className="text-sm text-slate-400 mb-1.5">cabezas</span>
@@ -174,7 +174,7 @@ export default function ReproductiveForecast() {
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass rounded-2xl p-5 border border-slate-200/50 bg-rose-50/30">
-                    <p className="text-xs font-semibold text-rose-500 mb-1">Imposibilidad Matemática</p>
+                    <p className="text-xs font-semibold text-rose-500 mb-1">Rodeo con retraso severo</p>
                     <div className="flex items-end gap-2">
                         <h3 className="text-3xl font-extrabold text-rose-600">{forecast.projectedDanger}</h3>
                         <span className="text-sm text-rose-400 mb-1.5">cabezas</span>
