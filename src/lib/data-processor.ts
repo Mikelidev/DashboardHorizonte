@@ -192,6 +192,15 @@ export function processDashboardData(
     // For safety with delayed cattle weigh-ins, we use a 365-day threshold before auto-archiving them as "Inactive".
     const RECENT_THRESHOLD_MS = 365 * 24 * 60 * 60 * 1000;
 
+    // Check if the herd has actually reached the reproductive cycle yet
+    let herdHasReproEvents = false;
+    for (const events of Object.values(eventsByIde)) {
+        if (events.some(e => e.type.toUpperCase().includes('TACTO ANESTRO 2') || e.type.toUpperCase().includes('IATF'))) {
+            herdHasReproEvents = true;
+            break;
+        }
+    }
+
     // 3. First pass over animals to calculate raw state and gather herd stats
     const draftAnimals: ProcessedAnimal[] = [];
     let sumGdm = 0;
@@ -316,7 +325,7 @@ export function processDashboardData(
         }
 
         // Phantom check (Has reached ending weight but skipped the reproduction cycle)
-        if (currentWeight !== null && currentWeight > 310 && !hasTact2OrIatf) {
+        if (herdHasReproEvents && currentWeight !== null && currentWeight > 310 && !hasTact2OrIatf) {
             anomalies.push({ ide: an.IDE, category: "Faltantes operativos", desc: `Fantasma Operativo: Registra buen peso (${currentWeight} kg) pero no ingresó a Tacto 2 ni IATF.`, location: `Falta evento reproductivo`, cause: "Saltó la manga o perdió caravana (chip ilegible)." });
         }
         // --- END ANOMALY AUDIT ---
