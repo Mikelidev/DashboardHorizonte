@@ -3,14 +3,20 @@ import { useDashboard } from './DashboardContext';
 import { calculateReproductiveForecast } from '@/lib/analytics-engine';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, ReferenceLine } from 'recharts';
-import { Target, AlertTriangle, Info, ZoomOut, MousePointer2, Move } from 'lucide-react';
+import { Target, AlertTriangle, Info, ZoomOut, MousePointer2, Move, FileText, ArrowRight } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ReproductiveForecast() {
-    const { animals, settings, selectedSnapshot, availableSnapshots } = useDashboard();
+    const { animals, settings, selectedSnapshot, availableSnapshots, setActiveProfileIde } = useDashboard();
     
     // Advanced Zoom & Pan State
     const [xDomain, setXDomain] = useState<[number | 'dataMin', number | 'dataMax']>(['dataMin', 'dataMax']);
     const [isPanning, setIsPanning] = useState(false);
+    
+    // IDE List Sidebar State
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [activeDetailType, setActiveDetailType] = useState<'MODERADO' | 'SEVERO' | null>(null);
     const lastMouseMoveValue = useRef<number | null>(null);
 
     const activeSnapshotDate = useMemo(() => {
@@ -135,6 +141,28 @@ export default function ReproductiveForecast() {
         return null;
     };
 
+    const handleOpenDetails = (type: 'MODERADO' | 'SEVERO') => {
+        setActiveDetailType(type);
+        setIsSheetOpen(true);
+    };
+
+    const getSheetData = () => {
+        if (!activeDetailType) return { title: '', desc: '', list: [] };
+        if (activeDetailType === 'MODERADO') return { 
+            title: 'Retraso Moderado', 
+            desc: 'Vaquillonas que no llegarán al objetivo actual pero requieren 1.5kg/día o menos de GDM.', 
+            list: forecast.delayedList 
+        };
+        if (activeDetailType === 'SEVERO') return { 
+            title: 'Retraso Severo', 
+            desc: 'Vaquillonas que requieren más de 1.5kg/día de GDM para llegar al objetivo a tiempo.', 
+            list: forecast.dangerList 
+        };
+        return { title: '', desc: '', list: [] };
+    };
+
+    const sheetData = getSheetData();
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-end">
@@ -165,16 +193,34 @@ export default function ReproductiveForecast() {
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass rounded-2xl p-5 border border-slate-200/50">
-                    <p className="text-xs font-semibold text-slate-500 mb-1">Rodeo con retraso moderado</p>
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    transition={{ delay: 0.2 }} 
+                    onClick={() => handleOpenDetails('MODERADO')}
+                    className="glass rounded-2xl p-5 border border-slate-200/50 cursor-pointer hover:border-amber-300 hover:shadow-md transition-all group"
+                >
+                    <p className="text-xs font-semibold text-slate-500 mb-1 flex justify-between items-center">
+                        Rodeo con retraso moderado
+                        <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />
+                    </p>
                     <div className="flex items-end gap-2">
                         <h3 className="text-3xl font-extrabold text-amber-500">{forecast.projectedDelayed}</h3>
                         <span className="text-sm text-slate-400 mb-1.5">cabezas</span>
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass rounded-2xl p-5 border border-slate-200/50 bg-rose-50/30">
-                    <p className="text-xs font-semibold text-rose-500 mb-1">Rodeo con retraso severo</p>
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    transition={{ delay: 0.3 }} 
+                    onClick={() => handleOpenDetails('SEVERO')}
+                    className="glass rounded-2xl p-5 border border-slate-200/50 bg-rose-50/30 cursor-pointer hover:border-rose-300 hover:shadow-md transition-all group"
+                >
+                    <p className="text-xs font-semibold text-rose-500 mb-1 flex justify-between items-center">
+                        Rodeo con retraso severo
+                        <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-rose-500" />
+                    </p>
                     <div className="flex items-end gap-2">
                         <h3 className="text-3xl font-extrabold text-rose-600">{forecast.projectedDanger}</h3>
                         <span className="text-sm text-rose-400 mb-1.5">cabezas</span>
@@ -305,6 +351,64 @@ export default function ReproductiveForecast() {
                     </div>
                 </motion.div>
             </div>
+
+            {/* Slide-over UI (Sheet) for displaying exact IDEs */}
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col bg-slate-50">
+                    <SheetHeader className="pb-4 border-b border-slate-200">
+                        <SheetTitle className="flex items-center gap-2 text-2xl">
+                            <FileText className="w-6 h-6 text-indigo-500" />
+                            {sheetData.title}
+                        </SheetTitle>
+                        <SheetDescription>
+                            {sheetData.desc} Total: <strong>{sheetData.list?.length || 0}</strong> vaquillonas.
+                        </SheetDescription>
+                    </SheetHeader>
+
+                    <div className="flex-1 min-h-0 -mx-6">
+                        <ScrollArea className="h-full px-6 py-4">
+                            {sheetData.list?.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                                    <Target className="w-12 h-12 mb-4 text-slate-200" />
+                                    <p>No hay vaquillonas en esta categoría.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {sheetData.list?.map((item: any, idx: number) => (
+                                        <button
+                                            key={item.ide + idx}
+                                            onClick={() => {
+                                                if (setActiveProfileIde) setActiveProfileIde(item.ide);
+                                                setIsSheetOpen(false);
+                                            }}
+                                            className="w-full text-left bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-mono text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{item.ide}</span>
+                                                <span className="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Ver Ficha</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 text-sm mt-1">
+                                                <div className="flex flex-col flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100">
+                                                    <span className="text-[10px] text-slate-400 uppercase font-bold">Peso Actual</span>
+                                                    <span className="text-xs font-semibold text-slate-700">{item.currentWeight} kg</span>
+                                                </div>
+                                                <div className="flex flex-col flex-1 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100">
+                                                    <span className="text-[10px] text-slate-400 uppercase font-bold">GDM Req. para Objetivo</span>
+                                                    <span className={`text-xs font-semibold ${activeDetailType === 'MODERADO' ? 'text-amber-600' : 'text-rose-600'}`}>{item.neededGdm} kg/d</span>
+                                                </div>
+                                            </div>
+
+                                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${activeDetailType === 'MODERADO' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
         </div>
     );
 }

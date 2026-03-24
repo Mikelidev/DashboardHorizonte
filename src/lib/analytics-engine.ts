@@ -285,6 +285,8 @@ export interface ForecastMetrics {
     projectedDanger: number;     // Mathematically impossible or negative GDM
     averageProjectedWeight: number;
     scatterData: { ide: string; weight: number; preñada: boolean; gdm: number }[]; // For Scatter Plot
+    delayedList: { ide: string; currentWeight: number; neededGdm: number | string }[];
+    dangerList: { ide: string; currentWeight: number; neededGdm: number | string }[];
 }
 
 /**
@@ -304,7 +306,9 @@ export function calculateReproductiveForecast(
         projectedDelayed: 0,
         projectedDanger: 0,
         averageProjectedWeight: 0,
-        scatterData: []
+        scatterData: [],
+        delayedList: [],
+        dangerList: []
     };
 
     if (!iatfStartDate) return metrics;
@@ -332,18 +336,33 @@ export function calculateReproductiveForecast(
         sumProjectedWeight += projectedWeight;
 
         // 2. Bucketing Logic
-        if (an.currentGdm < 0) {
-            // Losing weight is an automatic Danger
-            metrics.projectedDanger++;
-        } else if (projectedWeight >= targetWeight) {
+        if (projectedWeight >= targetWeight) {
             metrics.projectedReady++;
-        } else if (an.daysToTarget !== null) {
-            // Will she eventually reach it before the end of the reproductive cycle? (Say, 60 days buffer max)
-            const daysMissed = an.daysToTarget - daysUntilIatf;
-            if (daysMissed <= 60) {
-                metrics.projectedDelayed++;
+        } else {
+            // El animal no llega al peso objetivo con su GDM actual.
+            // Calculamos cuánto GDM NECESITA para llegar.
+            let neededGdm = Infinity;
+            
+            if (daysUntilIatf > 0) {
+                const kgsNeeded = targetWeight - an.currentWeight;
+                neededGdm = kgsNeeded / daysUntilIatf;
+            }
+
+            // Nueva regla: Retraso severo (Danger) solo si necesita más de 1.5kg/día
+            if (neededGdm > 1.5) {
+                metrics.projectedDanger++;
+                metrics.dangerList.push({ 
+                    ide: an.ide, 
+                    currentWeight: an.currentWeight, 
+                    neededGdm: neededGdm === Infinity ? 'Inalcanzable' : neededGdm.toFixed(2) 
+                });
             } else {
-                metrics.projectedDanger++; // Too far behind
+                metrics.projectedDelayed++;
+                metrics.delayedList.push({ 
+                    ide: an.ide, 
+                    currentWeight: an.currentWeight, 
+                    neededGdm: neededGdm.toFixed(2) 
+                });
             }
         }
 
