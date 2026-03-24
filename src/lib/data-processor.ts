@@ -382,10 +382,10 @@ export function processDashboardData(
             // Check if the animal was present in the last global session
             const lastEventDate = chronoEvents[0].date.getTime();
 
-            // We consider the animal "missing" if its last event date is more than 30 days older than the globalMaxTime
-            // (Assuming sessions happen roughly every 30-45 days, 30 days is a good threshold for a "missing" session)
-            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-            const isMissingFromLatestSession = (globalMaxTime - lastEventDate) > THIRTY_DAYS_MS;
+            // We consider the animal "missing" if its last event date is more than 60 days older than the globalMaxTime
+            // (Standard extensive cattle threshold, 60 days is safer than 30 for session gap)
+            const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
+            const isMissingFromLatestSession = (globalMaxTime - lastEventDate) > SIXTY_DAYS_MS;
 
             if (isMissingFromLatestSession) {
                 inventoryStatus = 'unregistered';
