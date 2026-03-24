@@ -61,22 +61,23 @@ export default function ReproductiveForecast() {
             const zoomIn = e.deltaY < 0;
             const zoomFactor = zoomIn ? 0.85 : 1.15;
             
-            const currentX = lastMouseMoveValue.current;
-            if (currentX === null) return;
+            // Estimate mouse position ratio across the chart
+            const rect = el.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const ratio = Math.max(0, Math.min(1, mouseX / rect.width));
 
             setXDomain(prev => {
                 const [currMin, currMax] = prev[0] === 'dataMin' 
                     ? [dataRange.min, dataRange.max] 
                     : [prev[0] as number, prev[1] as number];
 
+                const currentX = currMin + (currMax - currMin) * ratio;
                 const newRange = (currMax - currMin) * zoomFactor;
                 
                 // Limit zoom levels
                 if (newRange < 5 && zoomIn) return prev;
                 if (newRange > (dataRange.max - dataRange.min) * 5 && !zoomIn) return prev;
 
-                // Calculate new boundaries centered on mouse
-                const ratio = (currentX - currMin) / (currMax - currMin);
                 const newMin = currentX - (newRange * ratio);
                 const newMax = newMin + newRange;
 
@@ -88,29 +89,29 @@ export default function ReproductiveForecast() {
         return () => el.removeEventListener('wheel', handleWheel);
     }, [dataRange.min, dataRange.max]);
 
-    const handleMouseDown = useCallback((e: any) => {
-        if (e && e.xValue) {
-            setIsPanning(true);
-            lastMouseMoveValue.current = e.xValue;
-        }
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        setIsPanning(true);
     }, []);
 
-    const handleMouseMove = useCallback((e: any) => {
-        if (!e || e.xValue === undefined) return;
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!isPanning) return;
         
-        const currentX = e.xValue;
+        const el = chartContainerRef.current;
+        if (!el) return;
+
+        const pixelDeltaX = e.movementX;
         
-        if (isPanning && lastMouseMoveValue.current !== null) {
-            const dx = lastMouseMoveValue.current - currentX;
-            setXDomain(prev => {
-                const [currMin, currMax] = prev[0] === 'dataMin'
-                    ? [dataRange.min, dataRange.max]
-                    : [prev[0] as number, prev[1] as number];
-                return [currMin + dx, currMax + dx];
-            });
-        }
-        
-        lastMouseMoveValue.current = currentX;
+        setXDomain(prev => {
+            const [currMin, currMax] = prev[0] === 'dataMin'
+                ? [dataRange.min, dataRange.max]
+                : [prev[0] as number, prev[1] as number];
+                
+            const domainWidth = currMax - currMin;
+            const pixelWidth = el.clientWidth;
+            
+            const dxDomain = (pixelDeltaX / pixelWidth) * domainWidth;
+            return [currMin - dxDomain, currMax - dxDomain];
+        });
     }, [isPanning, dataRange]);
 
     const handleMouseUp = () => setIsPanning(false);
@@ -241,15 +242,15 @@ export default function ReproductiveForecast() {
                     <div 
                         ref={chartContainerRef}
                         className={`h-72 w-full select-none ${isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                        onDoubleClick={handleDoubleClick}
                     >
                         <ResponsiveContainer width="100%" height="100%">
                             <ScatterChart 
                                 margin={{ top: 35, right: 30, left: -20, bottom: 0 }}
-                                onMouseDown={handleMouseDown}
-                                onMouseMove={handleMouseMove}
-                                onMouseUp={handleMouseUp}
-                                onMouseLeave={handleMouseUp}
-                                onDoubleClick={handleDoubleClick}
                             >
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                 <XAxis
