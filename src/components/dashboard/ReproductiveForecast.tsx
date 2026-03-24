@@ -329,6 +329,7 @@ export default function ReproductiveForecast() {
                                     tick={{ fontSize: 12, fill: '#94a3b8' }}
                                     stroke="#cbd5e1"
                                     allowDataOverflow={true}
+                                    allowDecimals={false}
                                 />
                                 <YAxis
                                     type="number"
