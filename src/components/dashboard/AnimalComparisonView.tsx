@@ -2,8 +2,8 @@
 import React, { useState, useMemo } from 'react';
 import { useDashboard } from './DashboardContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Scale, Dna, Activity, HeartPulse, ShieldAlert, GitCompare } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { Search, X, Scale, Dna, Activity, HeartPulse, ShieldAlert, GitCompare, BarChart3, TrendingUp } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, BarChart, Bar } from 'recharts';
 
 interface AnimalComparisonViewProps {
     onViewChange?: (view: string) => void;
@@ -18,6 +18,7 @@ export default function AnimalComparisonView({ onViewChange }: AnimalComparisonV
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedIdes, setSelectedIdes] = useState<string[]>([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'WEIGHT' | 'GDM' | 'SCORE'>('WEIGHT');
 
     // Active animals to search from, excluding already selected
     const searchResults = useMemo(() => {
@@ -66,7 +67,11 @@ export default function AnimalComparisonView({ onViewChange }: AnimalComparisonV
 
         // Track last known weights to interpolate for each animal
         const lastKnownWeights: Record<string, number | null> = {};
-        selectedAnimals.forEach(a => lastKnownWeights[a.ide] = null);
+        const lastKnownGdms: Record<string, number | null> = {};
+        selectedAnimals.forEach(a => {
+            lastKnownWeights[a.ide] = null;
+            lastKnownGdms[a.ide] = null;
+        });
 
         // 3. Create unified data points
         const chartData = sortedDates.map(time => {
@@ -80,12 +85,23 @@ export default function AnimalComparisonView({ onViewChange }: AnimalComparisonV
                 // Find event on this exact date
                 const ev = animal.eventos.find(e => e.date.getTime() === time);
                 
-                if (ev && ev.weight !== null) {
-                    dataPoint[`weight_${animal.ide}`] = ev.weight;
-                    lastKnownWeights[animal.ide] = ev.weight;
+                if (ev) {
+                    if (ev.weight !== null) {
+                        dataPoint[`weight_${animal.ide}`] = ev.weight;
+                        lastKnownWeights[animal.ide] = ev.weight;
+                    } else {
+                        dataPoint[`weight_${animal.ide}`] = lastKnownWeights[animal.ide];
+                    }
+
+                    if (ev.gdm !== null) {
+                        dataPoint[`gdm_${animal.ide}`] = ev.gdm;
+                        lastKnownGdms[animal.ide] = ev.gdm;
+                    } else {
+                        dataPoint[`gdm_${animal.ide}`] = lastKnownGdms[animal.ide];
+                    }
                 } else {
-                    // Interpolate using last known weight
                     dataPoint[`weight_${animal.ide}`] = lastKnownWeights[animal.ide];
+                    dataPoint[`gdm_${animal.ide}`] = lastKnownGdms[animal.ide];
                 }
             });
 
@@ -93,6 +109,24 @@ export default function AnimalComparisonView({ onViewChange }: AnimalComparisonV
         });
 
         return chartData;
+    }, [selectedAnimals]);
+
+    const scoreChartData = useMemo(() => {
+        if (selectedAnimals.length === 0) return [];
+        return [
+            {
+                name: 'Potencial GDM (máx 40)',
+                ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreGdm]))
+            },
+            {
+                name: 'Reproductivo (máx 40)',
+                ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreReproductive]))
+            },
+            {
+                name: 'Consistencia (máx 20)',
+                ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreConsistency]))
+            },
+        ];
     }, [selectedAnimals]);
 
     return (
@@ -263,66 +297,135 @@ export default function AnimalComparisonView({ onViewChange }: AnimalComparisonV
                         ))}
                     </div>
 
-                    {/* Comparative Historical Chart */}
-                    <div className="glass rounded-2xl p-6 border border-slate-200/60">
-                        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                            Curvas de Evolución de Peso Intercedidas
-                            <span title="Crecimiento longitudinal paralelo" className="cursor-help"><Activity className="w-4 h-4 text-slate-400" /></span>
-                        </h3>
+                    {/* Comparative Historical Chart with Tabs */}
+                    <div className="glass rounded-2xl p-6 border border-slate-200/60 flex flex-col h-[500px]">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                Análisis Comparativo Detallado
+                                <span title="Compara evolución y puntajes" className="cursor-help"><Activity className="w-4 h-4 text-slate-400" /></span>
+                            </h3>
 
-                        <div className="h-96 w-full">
-                            {mergedChartData.length > 0 ? (
+                            {/* Chart Tabs */}
+                            <div className="flex bg-slate-100/80 p-1.5 rounded-xl self-start">
+                                <button
+                                    onClick={() => setActiveTab('WEIGHT')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'WEIGHT' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                >
+                                    <Scale className="w-4 h-4" /> Evolución de Peso
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('GDM')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'GDM' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                >
+                                    <TrendingUp className="w-4 h-4" /> Evolución de GDM
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('SCORE')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'SCORE' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                >
+                                    <BarChart3 className="w-4 h-4" /> Comparativa de Score
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 w-full min-h-0">
+                            {activeTab !== 'SCORE' ? (
+                                mergedChartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={mergedChartData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                            <XAxis
+                                                dataKey="dateFormatted"
+                                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                                stroke="#cbd5e1"
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <YAxis
+                                                domain={['auto', 'auto']}
+                                                unit={activeTab === 'WEIGHT' ? "kg" : "kg/d"}
+                                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                                stroke="#cbd5e1"
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                                                labelStyle={{ fontWeight: 'bold', color: '#1e293b', marginBottom: '8px' }}
+                                                formatter={(value: any, name: string | number | undefined) => {
+                                                    const unit = activeTab === 'WEIGHT' ? 'kg' : 'kg/día';
+                                                    const prefix = activeTab === 'WEIGHT' ? 'weight_' : 'gdm_';
+                                                    const ide = String(name || '').replace(prefix, '');
+                                                    return [`${Number(value).toFixed(activeTab === 'GDM' ? 3 : 1)} ${unit}`, `IDE: ${ide}`];
+                                                }}
+                                            />
+                                            <Legend 
+                                                verticalAlign="top" 
+                                                height={36} 
+                                                formatter={(value) => {
+                                                    const idea = value.replace('weight_', '').replace('gdm_', '');
+                                                    return <span className="text-slate-700 font-semibold text-sm">IDE: {idea}</span>;
+                                                }}
+                                            />
+
+                                            {selectedAnimals.map((animal, idx) => (
+                                                <Line
+                                                    key={animal.ide}
+                                                    type="monotone"
+                                                    dataKey={activeTab === 'WEIGHT' ? `weight_${animal.ide}` : `gdm_${animal.ide}`}
+                                                    name={activeTab === 'WEIGHT' ? `weight_${animal.ide}` : `gdm_${animal.ide}`}
+                                                    stroke={COLORS[idx % COLORS.length]}
+                                                    strokeWidth={3}
+                                                    connectNulls
+                                                    dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                                                    activeDot={{ r: 6, strokeWidth: 0, fill: COLORS[idx % COLORS.length] }}
+                                                />
+                                            ))}
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-slate-400 font-medium italic">
+                                        No hay datos históricos suficientes para trazar el gráfico.
+                                    </div>
+                                )
+                            ) : (
+                                /* SCORE BAR CHART */
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={mergedChartData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
+                                    <BarChart data={scoreChartData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                        <XAxis
-                                            dataKey="dateFormatted"
-                                            tick={{ fontSize: 12, fill: '#64748b' }}
-                                            stroke="#cbd5e1"
+                                        <XAxis 
+                                            dataKey="name" 
+                                            tick={{ fontSize: 13, fill: '#475569', fontWeight: 600 }}
                                             axisLine={false}
                                             tickLine={false}
                                         />
-                                        <YAxis
-                                            domain={['dataMin - 10', 'dataMax + 10']}
-                                            unit="kg"
+                                        <YAxis 
                                             tick={{ fontSize: 12, fill: '#64748b' }}
-                                            stroke="#cbd5e1"
+                                            domain={[0, 'auto']}
                                             axisLine={false}
                                             tickLine={false}
                                         />
                                         <Tooltip
+                                            cursor={{ fill: 'rgba(2f, 41, 59, 0.03)' }}
                                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                                            labelStyle={{ fontWeight: 'bold', color: '#1e293b', marginBottom: '8px' }}
-                                            formatter={(value: any, name: string | number | undefined) => {
-                                                const ide = String(name || '').replace('weight_', '');
-                                                return [`${value} kg`, `IDE: ${ide}`];
-                                            }}
                                         />
                                         <Legend 
                                             verticalAlign="top" 
                                             height={36} 
-                                            formatter={(value) => <span className="text-slate-700 font-semibold text-sm">IDE: {value.replace('weight_', '')}</span>}
+                                            formatter={(value) => <span className="text-slate-700 font-semibold text-sm">IDE: {value}</span>}
                                         />
-
                                         {selectedAnimals.map((animal, idx) => (
-                                            <Line
+                                            <Bar 
                                                 key={animal.ide}
-                                                type="monotone"
-                                                dataKey={`weight_${animal.ide}`}
-                                                name={`weight_${animal.ide}`}
-                                                stroke={COLORS[idx % COLORS.length]}
-                                                strokeWidth={3}
-                                                connectNulls
-                                                dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                                                activeDot={{ r: 6, strokeWidth: 0, fill: COLORS[idx % COLORS.length] }}
+                                                dataKey={animal.ide} 
+                                                name={animal.ide}
+                                                fill={COLORS[idx % COLORS.length]} 
+                                                radius={[4, 4, 0, 0]}
+                                                maxBarSize={60}
                                             />
                                         ))}
-                                    </LineChart>
+                                    </BarChart>
                                 </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-slate-400 font-medium italic">
-                                    No hay datos históricos suficientes para trazar el gráfico.
-                                </div>
                             )}
                         </div>
                     </div>
