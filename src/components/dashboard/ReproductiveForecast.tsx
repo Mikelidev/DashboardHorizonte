@@ -50,34 +50,43 @@ export default function ReproductiveForecast() {
     const readyRate = forecast.totalEligible > 0 ? (forecast.projectedReady / forecast.totalEligible) * 100 : 0;
 
     // --- Interactive Logic ---
+    const chartContainerRef = useRef<HTMLDivElement>(null);
 
-    const handleWheel = (e: React.WheelEvent) => {
-        // Prevent page scroll when zooming the chart
-        if (e.ctrlKey || true) { // Always zoom on wheel for this chart as requested
+    React.useEffect(() => {
+        const el = chartContainerRef.current;
+        if (!el) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault(); // Stop page from scrolling
             const zoomIn = e.deltaY < 0;
             const zoomFactor = zoomIn ? 0.85 : 1.15;
             
             const currentX = lastMouseMoveValue.current;
             if (currentX === null) return;
 
-            const [currMin, currMax] = xDomain[0] === 'dataMin' 
-                ? [dataRange.min, dataRange.max] 
-                : [xDomain[0] as number, xDomain[1] as number];
+            setXDomain(prev => {
+                const [currMin, currMax] = prev[0] === 'dataMin' 
+                    ? [dataRange.min, dataRange.max] 
+                    : [prev[0] as number, prev[1] as number];
 
-            const newRange = (currMax - currMin) * zoomFactor;
-            
-            // Limit zoom levels
-            if (newRange < 5 && zoomIn) return;
-            if (newRange > (dataRange.max - dataRange.min) * 5 && !zoomIn) return;
+                const newRange = (currMax - currMin) * zoomFactor;
+                
+                // Limit zoom levels
+                if (newRange < 5 && zoomIn) return prev;
+                if (newRange > (dataRange.max - dataRange.min) * 5 && !zoomIn) return prev;
 
-            // Calculate new boundaries centered on mouse
-            const ratio = (currentX - currMin) / (currMax - currMin);
-            const newMin = currentX - (newRange * ratio);
-            const newMax = newMin + newRange;
+                // Calculate new boundaries centered on mouse
+                const ratio = (currentX - currMin) / (currMax - currMin);
+                const newMin = currentX - (newRange * ratio);
+                const newMax = newMin + newRange;
 
-            setXDomain([newMin, newMax]);
-        }
-    };
+                return [newMin, newMax];
+            });
+        };
+
+        el.addEventListener('wheel', handleWheel, { passive: false });
+        return () => el.removeEventListener('wheel', handleWheel);
+    }, [dataRange.min, dataRange.max]);
 
     const handleMouseDown = useCallback((e: any) => {
         if (e && e.xValue) {
@@ -230,8 +239,8 @@ export default function ReproductiveForecast() {
                     </div>
 
                     <div 
+                        ref={chartContainerRef}
                         className={`h-72 w-full select-none ${isPanning ? 'cursor-grabbing' : 'cursor-crosshair'}`}
-                        onWheel={handleWheel}
                     >
                         <ResponsiveContainer width="100%" height="100%">
                             <ScatterChart 
