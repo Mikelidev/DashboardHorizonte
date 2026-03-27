@@ -57,22 +57,80 @@ function parseNumeric(val: string | number | null | undefined): number | null {
 }
 
 /**
- * Calculates Z-Score of the recent GDM vs the herd mean/stddev.
+ * Piecewise linear interpolation between a set of (value, score) anchor points.
+ * Values below the first anchor are clamped to the first anchor's score.
+ * Values above the last anchor are clamped to the last anchor's score.
  */
-function computeGdmZScore(gdm: number, mean: number, stdDev: number): number {
-    if (stdDev === 0) return 0;
-    return (gdm - mean) / stdDev;
+function interpolate(value: number, anchors: [number, number][]): number {
+    if (value <= anchors[0][0]) return anchors[0][1];
+    if (value >= anchors[anchors.length - 1][0]) return anchors[anchors.length - 1][1];
+    for (let i = 0; i < anchors.length - 1; i++) {
+        const [v0, s0] = anchors[i];
+        const [v1, s1] = anchors[i + 1];
+        if (value >= v0 && value <= v1) {
+            return s0 + ((value - v0) * (s1 - s0)) / (v1 - v0);
+        }
+    }
+    return anchors[anchors.length - 1][1];
 }
 
+/** A. GDM anchor points → max 30 pts */
+const GDM_ANCHORS: [number, number][] = [
+    [0.1,  0],
+    [0.4,  5],
+    [0.8, 15],
+    [1.0, 20],
+    [1.2, 30],
+];
+
+/** B. Weight-deviation anchor points (deviation as fraction, e.g. -0.20 = -20%) → max 30 pts */
+const WEIGHT_DEV_ANCHORS: [number, number][] = [
+    [-0.20,  0],
+    [-0.10,  5],
+    [ 0.00, 15],
+    [ 0.10, 20],
+    [ 0.20, 30],
+];
+
 /**
- * Transforms Z-score into a 0-40 scale.
- * Assuming Z-score mostly falls between -3 and +3.
- * We'll map Z = -2 to 0 pts, Z = +2 to 40 pts, bounded.
+ * C. Scores the reproductive state from tacto anestro events.
+ * Accepts ALL reproductive state strings from tacto events (order-independent).
+ * Returns max 40 pts.
  */
-function scaleGdmScore(zScore: number): number {
-    // Map [-2, 2] to [0, 40]
-    const base = ((zScore + 2) / 4) * 40;
-    return Math.max(0, Math.min(40, base));
+function scoreReproductiveFromTactos(tactoStates: string[]): number {
+    const normalize = (s: string): 'CC' | 'AS' | 'AP' | null => {
+        const u = s.trim().toUpperCase();
+        if (u.includes('CICLANDO')) return 'CC';
+        if (u === 'AS') return 'AS';
+        if (u === 'AP') return 'AP';
+        return null;
+    };
+
+    const states = tactoStates.map(normalize).filter((s): s is 'CC' | 'AS' | 'AP' => s !== null);
+
+    if (states.length === 0) return 0;
+
+    if (states.length === 1) {
+        switch (states[0]) {
+            case 'CC': return 38;
+            case 'AS': return 10;
+            case 'AP': return 0;
+        }
+    }
+
+    // For 2+ tactos, use the first two after alphabetic sorting to get a canonical pair key
+    // Sorted alphabetically: 'AP' < 'AS' < 'CC'
+    const sorted = [...states].sort();
+    const key = `${sorted[0]}+${sorted[1]}`;
+    const map: Record<string, number> = {
+        'CC+CC': 40,
+        'AS+CC': 35,
+        'AP+CC': 30,
+        'AP+AS': 15,
+        'AS+AS':  5,
+        'AP+AP':  0,
+    };
+    return map[key] ?? 0;
 }
 
 export function processDashboardData(
@@ -103,7 +161,6 @@ export function processDashboardData(
         if (ev.Evento && ev.Evento.toUpperCase().includes('PESADA')) {
             const d = parseDate(ev.Fecha);
             if (d) {
-                // Ignore invalid or empty dates
                 const dateStr = d.toISOString().split('T')[0];
                 pesadaDatesSet[dateStr] = d;
             }
@@ -152,7 +209,6 @@ export function processDashboardData(
         const d = parseDate(ev.Fecha);
 
         // --- TIME MACHINE: ENFORCE CUTOFF ---
-        // If a temporal snapshot is selected, pretend any event after that date never happened
         if (cutoffDate && d && d.getTime() > cutoffDate.getTime()) {
             continue;
         }
@@ -174,8 +230,6 @@ export function processDashboardData(
             if (isNaN(evNum)) evNum = 0;
         }
 
-        // Push ALL events, even those with missing dates (which fall back to Date(0)).
-        // This ensures critical state/service flags (like 'Transferencia de embrión' in a dateless Tacto) are not lost.
         eventsByIde[ev.IDE].push({
             date: d || new Date(0),
             type: ev.Evento || 'Desconocido',
@@ -187,10 +241,6 @@ export function processDashboardData(
             comments: ev.Comentarios || null
         });
     }
-
-    // Define what "recent" means (e.g., within the last year of the global max time)
-    // For safety with delayed cattle weigh-ins, we use a 365-day threshold before auto-archiving them as "Inactive".
-    const RECENT_THRESHOLD_MS = 365 * 24 * 60 * 60 * 1000;
 
     // Check if the herd has actually reached the reproductive cycle yet
     let herdHasReproEvents = false;
@@ -205,6 +255,8 @@ export function processDashboardData(
     const draftAnimals: ProcessedAnimal[] = [];
     let sumGdm = 0;
     let countGdm = 0;
+    let sumWeight = 0;
+    let countWeight = 0;
 
     for (const an of animales) {
         // Ficha Animales.csv: Si Padre es null, "NO INFO" o vacío, renombrar a "Otros Toros".
@@ -224,18 +276,11 @@ export function processDashboardData(
         else if (an['Tipo de servicio'] && typeof an['Tipo de servicio'] === 'string') masterServiceStr = an['Tipo de servicio'];
         else if (an['Servicio'] && typeof an['Servicio'] === 'string') masterServiceStr = an['Servicio'];
 
-        // Infer TE from Padre if the text explicitly says 'Esteco' in a heavily managed TE herd
-        // Usually 'TE' is written in the service column, but we guard against missing data
-        if (!masterServiceStr && padreStr.toUpperCase().includes('ESTECO')) {
-            // masterServiceStr = 'TE'; // Optional aggressive inference. Waiting for explicit column match first.
-        }
-
         const animalEvents = eventsByIde[an.IDE] || [];
 
         // -------------------------------------------------------------------------------------------------
         // 1. EXTRACT WEIGHT, GDM & CASH VELOCITY (Delta GDM) STRICTLY CHRONOLOGICALLY
         // -------------------------------------------------------------------------------------------------
-        // Copy the array and sort purely by absolute Date (most recent first)
         const chronoEvents = [...animalEvents].sort((a, b) => b.date.getTime() - a.date.getTime());
 
         let currentWeight: number | null = null;
@@ -243,31 +288,29 @@ export function processDashboardData(
         let previousGdm: number | null = null;
 
         for (const ev of chronoEvents) {
-            // Find the most recent valid Weight and GDM
             if (currentWeight === null && ev.weight !== null) currentWeight = ev.weight;
 
             if (currentGdm === null && ev.gdm !== null) {
                 currentGdm = ev.gdm;
             } else if (currentGdm !== null && previousGdm === null && ev.gdm !== null) {
-                // Find the GDM from the weighing BEFORE the current one
                 previousGdm = ev.gdm;
             }
 
             if (currentWeight !== null && currentGdm !== null && previousGdm !== null) break;
         }
 
-        // Calculate Delta GDM (Velocidad de Caja) only if we have two historical data points
+        // Calculate Delta GDM (Velocidad de Caja)
         let deltaGdm: number | null = null;
         if (currentGdm !== null && previousGdm !== null) {
             deltaGdm = currentGdm - previousGdm;
         }
 
-        // Calculate Average GDM (Historical average of all valid GDM readings)
+        // Calculate Average GDM
         let averageGdm: number | null = null;
         let totalGdm = 0;
         let gdmCount = 0;
         for (const ev of chronoEvents) {
-            if (ev.gdm !== null && ev.gdm > 0) { // Only average valid positive growth
+            if (ev.gdm !== null && ev.gdm > 0) {
                 totalGdm += ev.gdm;
                 gdmCount++;
             }
@@ -276,15 +319,13 @@ export function processDashboardData(
             averageGdm = totalGdm / gdmCount;
         }
 
-        // Calculate PDE (Peso por Día de Edad) only if we have a valid Birth Date and Current Weight
+        // Calculate PDE (Peso por Día de Edad)
         let pde: number | null = null;
         if (birthDate && currentWeight !== null) {
-            // Find the date of the most recent weight event to calculate exact days alive at that moment
             const weightEvent = chronoEvents.find(e => e.weight !== null);
             if (weightEvent && weightEvent.date.getTime() > birthDate.getTime()) {
                 const daysAlive = (weightEvent.date.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24);
                 if (daysAlive > 0) {
-                    // Assume standard birth weight of 30kg for precision
                     pde = (currentWeight - 30) / daysAlive;
                 }
             }
@@ -300,7 +341,6 @@ export function processDashboardData(
             const evType = ev.type.toUpperCase();
             const reproState = (ev.reproductiveState || '').toUpperCase();
 
-            // GDM Anomalies
             if (ev.gdm !== null) {
                 if (ev.gdm > 2.5) {
                     anomalies.push({ ide: an.IDE, category: "Anomalías de peso", desc: `GDM biológicamente imposible elevado (${ev.gdm} kg/día).`, location: `Eventos (${evType})`, cause: "Error de data entry en el peso actual o anterior." });
@@ -324,7 +364,6 @@ export function processDashboardData(
             anomalies.push({ ide: an.IDE, category: "Inconsistencias reproductivas", desc: `Registro de preñez anterior a la fecha de servicio.`, location: `Eventos`, cause: "Error de tipeo en las fechas." });
         }
 
-        // Phantom check (Has reached ending weight but skipped the reproduction cycle)
         if (herdHasReproEvents && currentWeight !== null && currentWeight > 310 && !hasTact2OrIatf) {
             anomalies.push({ ide: an.IDE, category: "Faltantes operativos", desc: `Fantasma Operativo: Registra buen peso (${currentWeight} kg) pero no ingresó a Tacto 2 ni IATF.`, location: `Falta evento reproductivo`, cause: "Saltó la manga o perdió caravana (chip ilegible)." });
         }
@@ -333,43 +372,31 @@ export function processDashboardData(
         // -------------------------------------------------------------------------------------------------
         // 2. ASSIGN PROTOCOL SCORES FOR BIOLOGICAL TIMELINE (Tactos are ultimate phase)
         // -------------------------------------------------------------------------------------------------
-
-        // Helper to assign a biological priority to events, immunizing the system against Excel date typos.
-        // Tacto IATF/Servicios is the ultimate final event. Tacto Anestro 2 comes before. Tacto Anestro 1 before that.
         const getPhaseScore = (type: string, number: number) => {
             const t = type.toUpperCase();
             if (t.includes('IATF') || t.includes('SERVICIO') || t.includes('DIAGNOS')) return 100;
             if (t.includes('TACTO ANESTRO') || t.includes('TACTO')) {
-                return 50 + number; // N° 2 beats N° 1
+                return 50 + number;
             }
             return 0;
         };
 
-        // Sort events by Protocol sequence first (Highest score = Most Recent Phase)
-        // If tied in the exact same phase, fallback to chronological Date.
         animalEvents.sort((a, b) => {
             const scoreA = getPhaseScore(a.type, a.eventNumber);
             const scoreB = getPhaseScore(b.type, b.eventNumber);
-
-            if (scoreA !== scoreB) {
-                return scoreB - scoreA;
-            }
+            if (scoreA !== scoreB) return scoreB - scoreA;
             return b.date.getTime() - a.date.getTime();
         });
 
-        // Is active? If she has any recorded events, she's fundamentally active.
         let isActive = animalEvents.length > 0;
 
-        // BUGFIX: We must check ALL events on the absolute latest date. If she had an empty Pesada AND a Tacto on the same day, she is still active.
         if (isActive && chronoEvents.length > 0) {
             const latestDate = chronoEvents[0].date.getTime();
             const eventsOnLatestDate = chronoEvents.filter(e => e.date.getTime() === latestDate);
-
             const hasReproEventOnLatestDate = eventsOnLatestDate.some(e => !e.type.toUpperCase().includes('PESADA'));
             const allLatestAreEmptyPesadas = eventsOnLatestDate.every(e =>
                 e.type.toUpperCase().includes('PESADA') && e.weight === null && e.gdm === null
             );
-
             if (allLatestAreEmptyPesadas && !hasReproEventOnLatestDate) {
                 isActive = false;
             }
@@ -379,17 +406,12 @@ export function processDashboardData(
         let inventoryStatus: 'active' | 'archived' | 'unregistered' = 'active';
 
         if (isActive && chronoEvents.length > 0) {
-            // Check if the animal was present in the last global session
             const lastEventDate = chronoEvents[0].date.getTime();
-
-            // We consider the animal "missing" if its last event date is more than 30 days older than the globalMaxTime
-            // (Assuming sessions happen roughly every 30-45 days, 30 days is a good threshold for a "missing" session)
             const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
             const isMissingFromLatestSession = (globalMaxTime - lastEventDate) > THIRTY_DAYS_MS;
-
             if (isMissingFromLatestSession) {
                 inventoryStatus = 'unregistered';
-                isActive = false; // Prevent counting unregistered animals by default
+                isActive = false;
             }
         } else if (!isActive && chronoEvents.length > 0) {
             inventoryStatus = 'archived';
@@ -410,14 +432,12 @@ export function processDashboardData(
 
             // 1. FINAL VERDICT: Tacto IATF
             if (evType.includes('IATF')) {
-                // ANY text in "Tipo de Servicio" means Pregnant
                 if (ev.serviceType && ev.serviceType.trim() !== '') {
                     reproState = 'PREÑADA';
                 } else {
-                    // Blank means Empty
                     reproState = 'VACIA';
                 }
-                break; // Stop looking, this is the ultimate verdict
+                break;
             }
 
             // 2. PRE-VERDICT: Tacto Anestro 1 & 2
@@ -425,9 +445,8 @@ export function processDashboardData(
                 const repStr = (ev.reproductiveState || '').trim().toUpperCase();
 
                 if (repStr.includes('PREÑADA') || repStr.includes('PRENADA')) {
-                    // USER RULE: Early Natural Pregnancy detected in a Tacto Anestro counts as 'PREÑADA' for the current state snapshot
                     reproState = 'PREÑADA';
-                    masterServiceStr = 'NATURAL'; // Explicit natural service
+                    masterServiceStr = 'NATURAL';
                     isApta = true;
                     break;
                 } else if (repStr === 'AS') {
@@ -443,18 +462,15 @@ export function processDashboardData(
                     isApta = false;
                     break;
                 } else if (repStr.includes('CICLANDO')) {
-                    // She is active ("Apta"), but not pregnant yet. We keep looking for a final verdict.
                     reproState = 'CICLANDO';
                     isApta = true;
-                    // Note: We DO NOT break here, because she might have a later service event
                 } else if (repStr === '') {
-                    // User Rule: If it's Tacto Anestro but has no explicit state, assume she's empty/anestro
                     reproState = 'VACIA';
                     break;
                 }
             }
 
-            // 3. FALLBACK: Catch Service outside of specific Tacto IATF event name (just in case)
+            // 3. FALLBACK: Catch Service outside of specific Tacto IATF event name
             if (!reproState && ev.serviceType && ev.serviceType.trim() !== '') {
                 reproState = 'PREÑADA';
                 if (!evType.includes('IATF')) masterServiceStr = 'NATURAL';
@@ -463,12 +479,7 @@ export function processDashboardData(
         }
 
         // --- 4. DATA MINING: SERVICE WINDOW GDM ---
-        // We look for the GDM recorded closest to, but strictly BEFORE, the first actual service or Tacto.
-        // The ideal window is ~30 days, but functionally we just want the last recorded GDM before conception.
         let serviceWindowGdm: number | null = null;
-
-        // Find the most recent reproductive event that indicates the start of the service period
-        // Usually, this is the IATF or Tacto Anestro for the CURRENT cycle.
         const latestServicePeriodEvent = chronoEvents.find(e =>
             e.type.toUpperCase().includes('IATF') ||
             e.type.toUpperCase().includes('TACTO') ||
@@ -477,16 +488,13 @@ export function processDashboardData(
         );
 
         if (latestServicePeriodEvent) {
-            // Find the latest GDM reading that happened ON OR BEFORE this service event
             const preServiceEvents = chronoEvents.filter(e => e.date.getTime() <= latestServicePeriodEvent.date.getTime() && e.gdm !== null);
             if (preServiceEvents.length > 0) {
-                // chronoEvents is sorted newest to oldest, so the first one in the filtered list is the closest previous date
                 serviceWindowGdm = preServiceEvents[0].gdm;
             } else {
                 serviceWindowGdm = currentGdm;
             }
         } else {
-            // If no service event at all yet, the "service window" is right now (projected)
             serviceWindowGdm = currentGdm;
         }
 
@@ -494,12 +502,16 @@ export function processDashboardData(
             sumGdm += currentGdm;
             countGdm++;
         }
+        if (isActive && currentWeight !== null) {
+            sumWeight += currentWeight;
+            countWeight++;
+        }
 
         draftAnimals.push({
             ide: an.IDE,
-            raza: an.Raza || 'Desconocida', // Keeping for backwards UI compatibility
+            raza: an.Raza || 'Desconocida',
             padre: padreStr,
-            masterServiceType: masterServiceStr || 'Desconocido', // Safely provide fallback
+            masterServiceType: masterServiceStr || 'Desconocido',
             birthDate,
             isActive,
             inventoryStatus,
@@ -518,6 +530,7 @@ export function processDashboardData(
             scoreConsistency: 0,
             scoreTotal: 0,
             scoreCategory: null,
+            fase: 'Recría',
 
             daysToTarget: null,
             alertRed: false,
@@ -527,47 +540,57 @@ export function processDashboardData(
 
     // 4. Calculate Herd Statistics for active animals
     const meanGdm = countGdm > 0 ? (sumGdm / countGdm) : 0;
+    const meanWeight = countWeight > 0 ? (sumWeight / countWeight) : 0;
 
-    // Calculate StdDev
-    let sumSqDiff = 0;
-    for (const draft of draftAnimals) {
-        if (draft.isActive && draft.currentGdm !== null) {
-            sumSqDiff += Math.pow(draft.currentGdm - meanGdm, 2);
-        }
-    }
-    const stdDevGdm = countGdm > 1 ? Math.sqrt(sumSqDiff / (countGdm - 1)) : 0;
-
-    // 5. Final scoring pass
+    // 5. Final scoring pass — PHASE-AWARE DYNAMIC METHODOLOGY
+    // A. GDM (max 30 pts)      — piecewise linear interpolation
+    // B. Weight vs avg lote (max 30 pts) — piecewise linear interpolation on % deviation
+    // C. Tacto reproductive state (max 40 pts) — set-based conditional
+    //
+    // Phase detection:
+    //   Recría  → no tacto reproductive data → Score = (A + B) × 1.667  (scales 60 → 100)
+    //   Selección → has tacto reproductive data → Score = A + B + C       (max 100)
     for (const draft of draftAnimals) {
         if (!draft.isActive) continue;
 
-        // --- 40% Potencia (GDM) ---
-        if (draft.currentGdm !== null) {
-            const zScore = computeGdmZScore(draft.currentGdm, meanGdm, stdDevGdm);
-            draft.scoreGdm = scaleGdmScore(zScore);
+        // --- A. GDM Score (max 30 pts) ---
+        draft.scoreGdm = draft.currentGdm !== null
+            ? Math.round(interpolate(draft.currentGdm, GDM_ANCHORS) * 10) / 10
+            : 0;
+
+        // --- B. Weight deviation vs herd average (max 30 pts) ---
+        draft.scoreConsistency = 0;
+        if (draft.currentWeight !== null && meanWeight > 0) {
+            const deviation = (draft.currentWeight - meanWeight) / meanWeight;
+            draft.scoreConsistency = Math.round(interpolate(deviation, WEIGHT_DEV_ANCHORS) * 10) / 10;
+        }
+
+        // --- C. Reproductive state from tacto events (max 40 pts) ---
+        // Collect ALL reproductive state strings from TACTO ANESTRO events (order-independent)
+        const tactoStates: string[] = draft.eventos
+            .filter(e =>
+                e.type.toUpperCase().includes('TACTO ANESTRO') ||
+                e.type.toUpperCase().includes('TACTO 1') ||
+                e.type.toUpperCase().includes('TACTO 2')
+            )
+            .map(e => e.reproductiveState || '')
+            .filter(s => s.trim() !== '');
+
+        // --- PHASE DETECTION ---
+        // If NO tacto state records exist: Recría phase — scale growth scores to 100
+        // If at least one tacto state exists: Selección phase — full 3-component formula
+        const hasTactoData = tactoStates.length > 0;
+        draft.fase = hasTactoData ? 'Selección' : 'Recría';
+
+        if (hasTactoData) {
+            // Selección: A + B + C (max 100 pts)
+            draft.scoreReproductive = scoreReproductiveFromTactos(tactoStates);
+            draft.scoreTotal = Math.round(draft.scoreGdm + draft.scoreConsistency + draft.scoreReproductive);
         } else {
-            draft.scoreGdm = 0;
+            // Recría: (A + B) × 1.667 — scales max 60 pts to 100 pts
+            draft.scoreReproductive = 0;
+            draft.scoreTotal = Math.round((draft.scoreGdm + draft.scoreConsistency) * 1.667);
         }
-
-        // --- 40% Reproductivo ---
-        draft.scoreReproductive = 0;
-        if (draft.reproductiveState) {
-            const state = draft.reproductiveState.toUpperCase();
-            // Preñada is 40pts.
-            if (state.includes('PREÑADA')) draft.scoreReproductive = 40;
-            // Ciclando is biologically good, but it's not a pregnancy. 32pts.
-            else if (state.includes('CICLANDO')) draft.scoreReproductive = 32;
-            else if (state.includes('ANESTRO SUPERFICIAL')) draft.scoreReproductive = 24; // 60% of 40 = 24 pts
-            else if (state.includes('ANESTRO PROFUNDO') || state.includes('ANESTRO CON CRIA')) draft.scoreReproductive = 8; // 20% of 40 = 8 pts
-        }
-
-        // --- 20% Consistencia ---
-        // Max 20 pts. Penetrate 10 pts per historical negative GDM.
-        let historicalNegativeGdmCount = draft.eventos.filter(e => e.gdm !== null && e.gdm < 0).length;
-        let consistencyPenalty = historicalNegativeGdmCount * 10;
-        draft.scoreConsistency = Math.max(0, 20 - consistencyPenalty);
-
-        draft.scoreTotal = Math.round(draft.scoreGdm + draft.scoreReproductive + draft.scoreConsistency);
 
         // --- Horizon Category Mapping ---
         if (draft.scoreTotal >= 80) draft.scoreCategory = 'ELITE';
@@ -580,7 +603,7 @@ export function processDashboardData(
             if (remainingDeficit > 0) {
                 draft.daysToTarget = Math.ceil(remainingDeficit / draft.currentGdm);
             } else {
-                draft.daysToTarget = 0; // Already reached
+                draft.daysToTarget = 0;
             }
         }
 
@@ -588,9 +611,7 @@ export function processDashboardData(
         draft.alertRed = false;
         draft.alertYellow = false;
 
-        // Find the latest tacto to determine alerts related to Anestro prior to IATF
         const latestTacto = draft.eventos.find(e => e.type.toUpperCase().includes('TACTO'));
-
         let isAnestro = false;
         if (latestTacto) {
             const tactoType = latestTacto.type.toUpperCase();
@@ -601,24 +622,16 @@ export function processDashboardData(
             }
         }
 
-        // Traditional Red Alerts (Critical nutritional OR physiological failures)
-        // Red alert: Negative GDM, GDM below min, OR they are in anestrus despite reaching target weight.
         if (draft.currentGdm !== null && (draft.currentGdm < 0 || draft.currentGdm < settings.gdmMin)) {
             draft.alertRed = true;
         } else if (isAnestro && draft.currentWeight !== null && draft.currentWeight >= settings.targetWeight) {
-             draft.alertRed = true;
+            draft.alertRed = true;
         }
 
-        // Traditional Yellow Alerts (Projecting past IATF Window)
-        // ONLY if we haven't reached the IATF date yet (globalMaxTime < windowStart)
-        // AND if they haven't reached the weight (daysToTarget > 0)
         const simulationsPastWindow = settings.iatfWindowStart && globalMaxTime > settings.iatfWindowStart.getTime();
-
         if (settings.iatfWindowStart && !simulationsPastWindow && draft.daysToTarget !== null && draft.daysToTarget > 0) {
-            const projectedDate = new Date(globalMaxTime); // Project from the "simulated today"
+            const projectedDate = new Date(globalMaxTime);
             projectedDate.setDate(projectedDate.getDate() + draft.daysToTarget);
-            
-            // Si la fecha en la que alcanzan el peso está DESPUES de cuando empieza el IATF, están retrasadas
             if (projectedDate.getTime() > settings.iatfWindowStart.getTime()) {
                 if (!draft.alertRed) draft.alertYellow = true;
             }

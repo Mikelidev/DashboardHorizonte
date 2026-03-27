@@ -115,16 +115,16 @@ export default function AnimalComparisonView({ onViewChange }: AnimalComparisonV
         if (selectedAnimals.length === 0) return [];
         return [
             {
-                name: 'Potencial GDM (máx 40)',
+                name: 'GDM (máx 30)',
                 ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreGdm]))
             },
             {
-                name: 'Reproductivo (máx 40)',
-                ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreReproductive]))
+                name: 'Peso vs Lote (máx 30)',
+                ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreConsistency]))
             },
             {
-                name: 'Consistencia (máx 20)',
-                ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreConsistency]))
+                name: 'Tacto Anestro (máx 40)',
+                ...Object.fromEntries(selectedAnimals.map(a => [a.ide, a.scoreReproductive]))
             },
         ];
     }, [selectedAnimals]);
@@ -406,8 +406,9 @@ export default function AnimalComparisonView({ onViewChange }: AnimalComparisonV
                                             tickLine={false}
                                         />
                                         <Tooltip
-                                            cursor={{ fill: 'rgba(2f, 41, 59, 0.03)' }}
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                                            cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
+                                            contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.08)', padding: '12px', background: 'rgba(255,255,255,0.97)' }}
+                                            formatter={(value: any, name?: string | number) => [`${Number(value).toFixed(1)} pts`, `IDE: ${String(name ?? '')}`]}
                                         />
                                         <Legend 
                                             verticalAlign="top" 

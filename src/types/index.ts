@@ -50,10 +50,11 @@ export interface ProcessedAnimal {
   serviceWindowGdm: number | null; // Velocidad de Caja (GDM) medida en los ~30 días previos a la ventana de servicio
 
   // Horizon Score parts
-  scoreGdm: number; // 0-40 (Z-Score based)
-  scoreReproductive: number; // 0-40
-  scoreConsistency: number; // 0-20
-  scoreTotal: number; // 0-100
+  fase: 'Recría' | 'Selección'; // Recría = no tacto data; Selección = has tacto data
+  scoreGdm: number; // A. GDM interpolation (max 30 pts)
+  scoreReproductive: number; // C. Tacto state (max 40 pts; 0 in Recría phase)
+  scoreConsistency: number; // B. Weight deviation vs lote avg (max 30 pts)
+  scoreTotal: number; // 0-100 (Recría: (A+B)*1.667 | Selección: A+B+C)
   scoreCategory: 'ELITE' | 'COMERCIAL' | 'DESCARTE' | null;
 
   // Computed flags for Alerts

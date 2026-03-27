@@ -14,12 +14,20 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
     const [topSort, setTopSort] = useState<SortConfig>({ key: 'scoreTotal', direction: 'desc' });
     const [bottomSort, setBottomSort] = useState<SortConfig>({ key: 'scoreTotal', direction: 'asc' });
 
-    const handleSort = (config: SortConfig, setConfig: React.Dispatch<React.SetStateAction<SortConfig>>, key: keyof ProcessedAnimal) => {
-        let direction: SortDirection = 'asc';
-        if (config.key === key && config.direction === 'asc') direction = 'desc';
-        else if (config.key === key && config.direction === 'desc') direction = null;
+    const handleTopSort = (key: keyof ProcessedAnimal) => {
+        setTopSort(prev => {
+            if (prev.key !== key) return { key, direction: 'desc' };
+            if (prev.direction === 'desc') return { key, direction: 'asc' };
+            return { key: 'scoreTotal', direction: 'desc' }; // reset to default
+        });
+    };
 
-        setConfig(direction ? { key, direction } : { key: 'scoreTotal', direction: config === topSort ? 'desc' : 'asc' });
+    const handleBottomSort = (key: keyof ProcessedAnimal) => {
+        setBottomSort(prev => {
+            if (prev.key !== key) return { key, direction: 'asc' };
+            if (prev.direction === 'asc') return { key, direction: 'desc' };
+            return { key: 'scoreTotal', direction: 'asc' }; // reset to default
+        });
     };
 
     const getSortIcon = (config: SortConfig, columnKey: keyof ProcessedAnimal) => {
@@ -32,14 +40,14 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
     // Calculate Top 20 and Bottom 20 based on initial default score
     const top20 = useMemo(() => {
         return [...animals]
-            .filter(a => a.scoreTotal !== undefined && a.reproductiveState !== null)
+            .filter(a => a.isActive && a.scoreTotal !== undefined && a.scoreTotal > 0)
             .sort((a, b) => (b.scoreTotal || 0) - (a.scoreTotal || 0))
             .slice(0, 20);
     }, [animals]);
 
     const bottom20 = useMemo(() => {
         return [...animals]
-            .filter(a => a.scoreTotal !== undefined && a.reproductiveState !== null)
+            .filter(a => a.isActive && a.scoreTotal !== undefined && a.scoreTotal > 0)
             .sort((a, b) => (a.scoreTotal || 0) - (b.scoreTotal || 0))
             .slice(0, 20);
     }, [animals]);
@@ -153,11 +161,11 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
                     <table className="w-full text-left border-collapse text-sm">
                         <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-200 shadow-sm">
                             <tr className="text-slate-500 text-xs uppercase tracking-wider">
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(topSort, setTopSort, 'ide')}>IDE {getSortIcon(topSort, 'ide')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(topSort, setTopSort, 'reproductiveState')}>Repro {getSortIcon(topSort, 'reproductiveState')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(topSort, setTopSort, 'currentGdm')}>GDM {getSortIcon(topSort, 'currentGdm')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(topSort, setTopSort, 'pde')}>PDE {getSortIcon(topSort, 'pde')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(topSort, setTopSort, 'scoreTotal')}>Score {getSortIcon(topSort, 'scoreTotal')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleTopSort('ide')}>IDE {getSortIcon(topSort, 'ide')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleTopSort('reproductiveState')}>Repro {getSortIcon(topSort, 'reproductiveState')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleTopSort('currentGdm')}>GDM {getSortIcon(topSort, 'currentGdm')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleTopSort('pde')}>PDE {getSortIcon(topSort, 'pde')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleTopSort('scoreTotal')}>Score {getSortIcon(topSort, 'scoreTotal')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -190,11 +198,11 @@ export default function TopBottomRankings({ onViewChange }: { onViewChange?: (vi
                     <table className="w-full text-left border-collapse text-sm">
                         <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-200 shadow-sm">
                             <tr className="text-slate-500 text-xs uppercase tracking-wider">
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(bottomSort, setBottomSort, 'ide')}>IDE {getSortIcon(bottomSort, 'ide')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleSort(bottomSort, setBottomSort, 'reproductiveState')}>Repro {getSortIcon(bottomSort, 'reproductiveState')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(bottomSort, setBottomSort, 'currentGdm')}>GDM {getSortIcon(bottomSort, 'currentGdm')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(bottomSort, setBottomSort, 'pde')}>PDE {getSortIcon(bottomSort, 'pde')}</th>
-                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleSort(bottomSort, setBottomSort, 'scoreTotal')}>Score {getSortIcon(bottomSort, 'scoreTotal')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleBottomSort('ide')}>IDE {getSortIcon(bottomSort, 'ide')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => handleBottomSort('reproductiveState')}>Repro {getSortIcon(bottomSort, 'reproductiveState')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleBottomSort('currentGdm')}>GDM {getSortIcon(bottomSort, 'currentGdm')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleBottomSort('pde')}>PDE {getSortIcon(bottomSort, 'pde')}</th>
+                                <th className="py-3 px-4 font-bold cursor-pointer select-none text-right" onClick={() => handleBottomSort('scoreTotal')}>Score {getSortIcon(bottomSort, 'scoreTotal')}</th>
                             </tr>
                         </thead>
                         <tbody>
